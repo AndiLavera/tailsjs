@@ -7,7 +7,7 @@ import { Configuration } from "./configuration.ts";
 
 export class Application {
   readonly config: Configuration;
-  private readonly appRoot: string;
+  readonly appRoot: string;
   private readonly mode: "test" | "development" | "production";
   private readonly reload: boolean;
 
@@ -134,7 +134,7 @@ export class Application {
     // }).forEach(([key, value]) => Deno.env.set(key, value));
 
     // change current work dir to appDoot
-    Deno.chdir(this.appRoot);
+    // Deno.chdir(this.appRoot);
 
     // for await (
     //   const { path: p } of walk(
