@@ -10,8 +10,34 @@ export default class extends Router {
       ];
     });
 
+    this.pipeline("web", () => {
+      return [
+        logging,
+      ];
+    });
+
     this.routes("api", () => {
-      this.get("/create", TestController, "create");
+      // this.get("/create", TestController, "create");
+      this.gett({
+        path: "/create",
+        module: TestController,
+        method: "create",
+      });
+    });
+
+    this.routes("web", () => {
+      this.gett(
+        {
+          path: "/",
+          page: "index.tsx",
+        },
+      );
+      this.gett(
+        {
+          path: "/about",
+          page: "about.tsx",
+        },
+      );
     });
   }
 }

@@ -13,6 +13,7 @@ const Home = () => {
       <p style={garden}>
         {Array(count).fill(<span>🦕</span>)}
       </p>
+      <a href="/">Home</a>
     </div>
   );
 };

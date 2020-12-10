@@ -1,22 +1,16 @@
 import { Application } from "./application.ts";
-import {
-  ComponentType,
-  Context,
-  React,
-  ReactElement,
-  renderToString,
-  Router,
-  Server,
-} from "../deps.ts";
+import { Context, Router, Server } from "../deps.ts";
 import logger from "../logger/logger.ts";
 import { path, walk } from "../std.ts";
-import { Modules, Routes } from "../types.ts";
+import { Modules } from "../types.ts";
+import { generateHTMLRoutes } from "../utils/generate_html_routes.tsx";
+import Controller from "../controller/controller.ts";
 import {
   compileApp,
   compilePages,
   writeCompiledFiles,
   writeModule,
-} from "../compiler/index.ts";
+} from "../compiler/compiler.ts";
 
 async function loadStaticMiddleware(server: Server) {
   for await (
@@ -33,18 +27,111 @@ function loadUserMiddleware(app: Application, server: Server) {
   app
     .config
     .router
-    ._routes
+    ._pipelines
     .api
     .middleware
     .forEach((middleware) => server.use(middleware));
 }
 
+// TODO: Duplicate
+type Middleware = Array<
+  (ctx: Context, next: () => Promise<void>) => Promise<void>
+>;
+
+function setMiddleware(middlewares: Middleware, router: Router) {
+  middlewares
+    .forEach((middleware) => router.use(middleware));
+}
+
+// TODO: Duplicate
+interface Route {
+  module?: typeof Controller;
+  method?: string;
+  page?: string;
+}
+
+// TODO: Duplicate
+interface Paths {
+  [key: string]: Record<string, Route>;
+  get: Record<string, Route>;
+  post: Record<string, Route>;
+  put: Record<string, Route>;
+  patch: Record<string, Route>;
+  delete: Record<string, Route>;
+  head: Record<string, Route>;
+  connect: Record<string, Route>;
+  options: Record<string, Route>;
+  trace: Record<string, Route>;
+}
+
+// TODO: Implement other http methods
+function setRoute(
+  routes: any,
+  router: Router,
+  httpMethod: string,
+  pipeline: string,
+  appRoot: string,
+  AppComponent: any,
+) {
+  switch (httpMethod) {
+    case "get":
+      if (pipeline === "web") {
+        generateHTMLRoutes(
+          // TODO: Duplicate import APP
+          AppComponent,
+          routes,
+          router,
+          "/main.js",
+          appRoot,
+        );
+      }
+
+      break;
+  }
+}
+
+function setRoutes(
+  paths: Paths,
+  router: Router,
+  pipeline: string,
+  appRoot: string,
+  AppComponent: any,
+) {
+  Object.keys(paths)
+    .forEach((httpMethod) => {
+      const routes = paths[httpMethod];
+      setRoute(routes, router, httpMethod, pipeline, appRoot, AppComponent);
+    });
+}
+
+function loadUserRoutes(app: Application, AppComponent: any) {
+  const routers: Router[] = [];
+  const pipelines = app
+    .config
+    .router
+    ._pipelines;
+
+  Object.keys(pipelines)
+    .forEach((key) => {
+      const pipeline = pipelines[key];
+      const router = new Router();
+
+      setMiddleware(pipeline.middleware, router);
+      setRoutes(pipeline.paths, router, key, app.appRoot, AppComponent);
+      routers.push(router);
+    });
+
+  return routers;
+}
+
 /**
  * Load boostrap file
  */
-function loadBootstrap() {
+async function loadBootstrap() {
   const decoder = new TextDecoder("utf-8");
-  const data = await Deno.readFile("./bootstrap.js");
+  const data = await Deno.readFile(
+    path.resolve("./") + "/browser/bootstrap.js",
+  );
   return decoder.decode(data);
 }
 
@@ -54,6 +141,8 @@ export async function start(
   mode: "test" | "development" | "production",
   reload = false,
 ) {
+  // TODO: Move into application
+  const App = await importComponent(`${path.resolve("./")}/browser/app.tsx`);
   const application = new Application(appDir, mode, reload);
   await application.ready();
 
@@ -61,16 +150,7 @@ export async function start(
 
   await loadStaticMiddleware(server);
   loadUserMiddleware(application, server);
-
-  Deno.chdir(application.appRoot);
-
-  /**
-   * Main routes defined in user routes file
-   */
-  const routes: Routes = {
-    "/": "/pages/index.tsx",
-    "/about": "/pages/about.tsx",
-  };
+  const routers = loadUserRoutes(application, App);
 
   /**
  * Main bundle all pages should fetch
@@ -87,25 +167,28 @@ bootstrap({
 
   const modules: Modules = {};
 
-  await compileApp("./pages/app.tsx", modules);
-  await compilePages(routes, modules);
+  await compileApp("./browser/app.tsx", modules);
+
+  /**
+   * Main routes defined in user routes file
+   */
+  const routes = {
+    "/": "/pages/index.tsx",
+    "/about": "/pages/about.tsx",
+  };
+  await compilePages(routes, modules, application.appRoot);
   await writeModule(modules);
 
-  await writeCompiledFiles(modules);
+  await writeCompiledFiles(modules, application.appRoot);
 
-  const jsRouter = generateJSRoutes(modules);
-  const htmlRouter = await generateHTMLRoutes(routes, mainJSPath);
-
-  const router = new Router();
-
-  server.use(router.routes());
-  server.use(router.allowedMethods());
-
+  const jsRouter = generateJSRoutes(modules, application.appRoot);
   server.use(jsRouter.routes());
   server.use(jsRouter.allowedMethods());
 
-  server.use(htmlRouter.routes());
-  server.use(htmlRouter.allowedMethods());
+  routers.forEach((router) => {
+    server.use(router.routes());
+    server.use(router.allowedMethods());
+  });
 
   server.addEventListener("listen", ({ hostname, port, secure }) => {
     logger.info(
@@ -114,6 +197,12 @@ bootstrap({
     );
   });
 
+  const bootstrapFile = await loadBootstrap();
+
+  const router = new Router();
+
+  server.use(router.routes());
+  server.use(router.allowedMethods());
   router
     .get(mainJSPath, (context: Context) => {
       context.response.type = "application/javascript";
@@ -121,7 +210,7 @@ bootstrap({
     })
     .get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
-      context.response.body = loadBootstrap();
+      context.response.body = bootstrapFile;
     });
 
   // if app.target = serverless then server.handle
@@ -138,52 +227,29 @@ async function importComponent(path: string) {
   return (await import(path)).default;
 }
 
-function generateJSRoutes(modules: Modules) {
+function generateJSRoutes(modules: Modules, appRoot: string) {
   const router = new Router();
-  const filePath = "file://" + path.resolve("./");
+  const filePath = "file://" + appRoot + "/src";
+  console.log("filePath");
+  console.log(filePath);
 
+  console.log("pathWithoutJS");
   Object.keys(modules).forEach((route) => {
     Object.keys(modules[route]).forEach((file) => {
       const pathWithJS = file.replace(filePath, "");
       const pathWithoutJS = pathWithJS.replace(".js", "");
+      console.log(pathWithoutJS);
 
       router.get(
-        pathWithoutJS,
+        // TODO: Hacky - Need better file path handling
+        pathWithoutJS.includes("app.tsx")
+          ? ("/" + pathWithoutJS.split("/").slice(-1)[0])
+          : pathWithoutJS,
         (context: Context) => {
           context.response.type = "application/javascript";
           context.response.body = modules[route][file];
         },
       );
-    });
-  });
-
-  return router;
-}
-
-async function generateHTMLRoutes(
-  routes: Routes,
-  mainJSPath: string,
-) {
-  const App = await importComponent("./app.tsx");
-  const router = new Router();
-  await Object.keys(routes).forEach(async (route) => {
-    const Component = await importComponent("." + routes[route]);
-
-    const html = `<html>
-      <head>
-        <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/pure-min.css">
-      </head>
-      <body>
-        <main id="app">${
-      renderToString(<App Page={Component} pageProps={{}} />)
-    }</main>
-        <script type="module" src="${mainJSPath}"></script>
-      </body>
-    </html>`;
-
-    router.get(route, (context: Context) => {
-      context.response.type = "text/html";
-      context.response.body = html;
     });
   });
 

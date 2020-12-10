@@ -2,13 +2,13 @@ import { existsFileSync } from "../fs.ts";
 import log from "../logger/logger.ts";
 // import { Routing } from "./routing.ts";
 import { path } from "../std.ts";
-import { Plugin, SSROptions } from "./types.ts";
+import { Plugin, SSROptions } from "../types.ts";
 import util, { reLocaleID } from "./utils.ts";
 import { Router } from "../controller/router.ts";
 import FakeRouter from "../controller/fake_router.ts";
 
 /**
-* Config for Tails.js application. Handels loading & processing
+* Config for Tails.js application. Handles loading & processing
 * user config files.
 */
 export class Configuration {
@@ -144,7 +144,6 @@ export class Configuration {
       env,
       plugins,
       postcss,
-      pipelines,
     } = config;
     if (util.isNEString(srcDir)) {
       Object.assign(this, { srcDir: util.cleanPath(srcDir) });
@@ -230,18 +229,6 @@ export class Configuration {
         log.warn("bad postcss.config.json", e.message);
       }
     }
-
-    // if (util.isPlainObject(pipelines)) {
-    //   const pipes: Record<string, Array<BasePipe>> = {};
-    //   Object.keys(pipelines).forEach((pipeline) => {
-    //     if (util.isArray(pipelines[pipeline])) {
-    //       console.log(`${pipeline} passed`);
-    //       pipes[pipeline] = pipelines[pipeline];
-    //     }
-    //   });
-
-    //   Object.assign(this, { pipes });
-    // }
   }
 
   async loadRoutes() {

@@ -48,12 +48,12 @@ export class Application {
   }
 
   private async init(reload: boolean) {
-    const walkOptions = {
-      includeDirs: false,
-      exts: [".js", ".ts", ".mjs"],
-      skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
-    };
-    const apiDir = path.join(this.srcDir, "api");
+    // const walkOptions = {
+    //   includeDirs: false,
+    //   exts: [".js", ".ts", ".mjs"],
+    //   skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
+    // };
+    // const apiDir = path.join(this.srcDir, "api");
     const pagesDir = path.join(this.srcDir, "pages");
 
     if (!(existsDirSync(pagesDir))) {
@@ -67,166 +67,7 @@ export class Application {
       await ensureDir(this.buildDir);
     }
 
-    // import postcss plugins
-    // await Promise.all(this.config.postcss.plugins.map(async (p) => {
-    //   let name: string;
-    //   if (typeof p === "string") {
-    //     name = p;
-    //   } else {
-    //     name = p.name;
-    //   }
-    //   const { default: Plugin } = await import(
-    //     `https://esm.sh/${name}?external=postcss@8.1.4&no-check`
-    //   );
-    //   this.#postcssPlugins[name] = Plugin;
-    // }));
-
-    // inject virtual browser gloabl objects
-    Object.assign(globalThis, {
-      __createHTMLDocument: () => createHTMLDocument(),
-      document: createHTMLDocument(),
-      navigator: {
-        connection: {
-          downlink: 1.5,
-          effectiveType: "3g",
-          onchange: null,
-          rtt: 300,
-          saveData: false,
-        },
-        cookieEnabled: false,
-        deviceMemory: 0,
-        hardwareConcurrency: 0,
-        language: "en",
-        maxTouchPoints: 0,
-        onLine: true,
-        userAgent: `Deno/${Deno.version.deno}`,
-        vendor: "Deno Land",
-      },
-      location: {
-        protocol: "http:",
-        host: "localhost",
-        hostname: "localhost",
-        port: "",
-        href: "https://localhost/",
-        origin: "https://localhost",
-        pathname: "/",
-        search: "",
-        hash: "",
-        reload() {},
-        replace() {},
-        toString() {
-          return this.href;
-        },
-      },
-      innerWidth: 1920,
-      innerHeight: 1080,
-      devicePixelRatio: 1,
-      $RefreshReg$: () => {},
-      $RefreshSig$: () => (type: any) => type,
-    });
-
-    // inject env variables
-    // Object.entries({
-    //   ...this.config.env,
-    //   __version: version,
-    //   __buildMode: this.mode,
-    //   __buildTarget: this.config.buildTarget,
-    // }).forEach(([key, value]) => Deno.env.set(key, value));
-
-    // change current work dir to appDoot
-    // Deno.chdir(this.appRoot);
-
-    // for await (
-    //   const { path: p } of walk(
-    //     this.srcDir,
-    //     {
-    //       ...walkOptions,
-    //       maxDepth: 1,
-    //       exts: [...walkOptions.exts, ".jsx", ".tsx"],
-    //     },
-    //   )
-    // ) {
-    //   const name = path.basename(p);
-    //   switch (name.replace(reModuleExt, "")) {
-    //     case "app":
-    //     case "404":
-    //     case "loading":
-    //       await this._compile("/" + name);
-    //       break;
-    //   }
-    // }
-
-    // if (existsDirSync(apiDir)) {
-    //   for await (const { path: p } of walk(apiDir, walkOptions)) {
-    //     const mod = await this._compile(
-    //       "/api" + util.trimPrefix(p, apiDir).split("\\").join("/"),
-    //     );
-    //     this.#apiRouting.update(this._getRouteModule(mod));
-    //   }
-    // }
-
-    // for await (
-    //   const { path: p } of walk(
-    //     pagesDir,
-    //     { ...walkOptions, exts: [...walkOptions.exts, ".jsx", ".tsx", ".md"] },
-    //   )
-    // ) {
-    //   const rp = util.trimPrefix(p, pagesDir).split("\\").join("/");
-    //   const mod = await this._compile("/pages" + rp);
-    //   this.#routing.update(this._getRouteModule(mod));
-    // }
-
-    // const precompileUrls = [
-    //   "https://deno.land/x/aleph/bootstrap.ts",
-    //   "https://deno.land/x/aleph/nomodule.ts",
-    //   "https://deno.land/x/aleph/tsc/tslib.js",
-    // ];
-    // if (this.isDev) {
-    //   precompileUrls.push("https://deno.land/x/aleph/hmr.ts");
-    // }
-    // for (const url of precompileUrls) {
-    //   await this._compile(url);
-    // }
-    // await this._compile(
-    //   "https://deno.land/x/aleph/renderer.ts",
-    //   { forceTarget: "es2020" },
-    // );
-    // await this._createMainModule();
-
-    // const { renderPage } = await import(
-    //   "file://" + this.#modules.get("//deno.land/x/aleph/renderer.js")!.jsFile
-    // );
-    // this.#renderer = { renderPage };
-
-    // log.info(colors.bold(`Aleph.js v${version}`));
-    // if (this.config.__file) {
-    //   log.info(colors.bold("- Config"));
-    //   log.info("  ▲", this.config.__file);
-    // }
-    // log.info(colors.bold("- Global"));
-    // if (this.#modules.has("/app.js")) {
-    //   log.info("  ✓", "Custom App");
-    // }
-    // if (this.#modules.has("/404.js")) {
-    //   log.info("  ✓", "Custom 404 Page");
-    // }
-    // if (this.#modules.has("/loading.js")) {
-    //   log.info("  ✓", "Custom Loading Page");
-    // }
-
-    // if (this.isDev) {
-    //   if (this.#apiRouting.paths.length > 0) {
-    //     log.info(colors.bold("- APIs"));
-    //   }
-    //   for (const path of this.#apiRouting.paths) {
-    //     log.info("  λ", path);
-    //   }
-    //   log.info(colors.bold("- Pages"));
-    //   for (const path of this.#routing.paths) {
-    //     const isIndex = path == "/";
-    //     log.info("  ○", path, isIndex ? colors.dim("(index)") : "");
-    //   }
-    // }
+    // TODO: Load user assets
 
     if (this.isDev) {
       // this._watch();

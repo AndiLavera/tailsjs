@@ -27,6 +27,7 @@ export default function Home() {
         <button onClick={() => setCount((n) => n + 1)}>+</button>
       </p>
       <p className="copyinfo">Built by Aleph.js in Deno v{version}</p>
+      <a href="/about">About</a>
     </div>
   );
 }

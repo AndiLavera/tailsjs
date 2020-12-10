@@ -1,43 +1,15 @@
 import Controller from "./controller.ts";
-import { Context } from "../deps.ts";
 import { pathsFactory } from "./utils.ts";
-
-interface Route {
-  module: typeof Controller;
-  method: string;
-}
-
-interface Paths {
-  get: Record<string, Route>;
-  post: Record<string, Route>;
-  put: Record<string, Route>;
-  patch: Record<string, Route>;
-  delete: Record<string, Route>;
-  head: Record<string, Route>;
-  connect: Record<string, Route>;
-  options: Record<string, Route>;
-  trace: Record<string, Route>;
-}
-
-type Middleware = Array<
-  (ctx: Context, next: () => Promise<void>) => Promise<void>
->;
-
-interface Routes {
-  [key: string]: {
-    middleware: Middleware;
-    paths: Paths;
-  };
-}
+import { Middleware, Paths, Routes } from "../types.ts";
 
 export abstract class Router {
-  _routes: Routes;
+  _pipelines: Routes;
   _paths: Paths;
 
   abstract drawRoutes(): void;
 
   constructor() {
-    this._routes = {
+    this._pipelines = {
       web: {
         middleware: [],
         paths: pathsFactory(),
@@ -51,16 +23,16 @@ export abstract class Router {
   }
 
   pipeline(pipe: string, callback: () => Middleware): void {
-    if (this._routes[pipe]) {
-      this._routes[pipe].middleware.concat(callback());
+    if (this._pipelines[pipe]) {
+      this._pipelines[pipe].middleware.concat(callback());
     }
 
-    this._routes[pipe] = { middleware: callback(), paths: pathsFactory() };
+    this._pipelines[pipe] = { middleware: callback(), paths: pathsFactory() };
   }
 
   routes(pipeline: string, callback: () => void) {
-    if (this._routes[pipeline]) {
-      this._paths = this._routes[pipeline].paths;
+    if (this._pipelines[pipeline]) {
+      this._paths = this._pipelines[pipeline].paths;
       callback();
     } else {
       // TODO: Pipeline doesn't exist
@@ -102,6 +74,38 @@ export abstract class Router {
     } else {
       this._paths.get = {};
       this._paths.get[path] = { module, method };
+    }
+  }
+
+  gett({ path, module, page, method }: {
+    path: string;
+    module?: typeof Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (!module && !page) {
+      // TODO: Custom error
+      throw new Error("Must supply a module or method");
+    }
+
+    if (module && method) {
+      if (this._paths.get) {
+        this._paths.get[path] = { module, method };
+      } else {
+        this._paths.get = {};
+        this._paths.get[path] = { module, method };
+      }
+
+      return;
+    }
+
+    if (page) {
+      if (this._paths.get) {
+        this._paths.get[path] = { page };
+      } else {
+        this._paths.get = {};
+        this._paths.get[path] = { page };
+      }
     }
   }
 
