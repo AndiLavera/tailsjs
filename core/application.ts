@@ -85,12 +85,13 @@ export class Application {
       await ensureDir(this.buildDir);
     }
 
-    await this.compile(); // sets `this.modules`
-
     await this.routeHandler.init(
       await this.loadBootstrap(),
-      this.modules,
     );
+
+    await this.compile(); // sets `this.modules`
+
+    await this.routeHandler.generateJSRoutes(this.modules);
 
     if (this.isDev) {
       // this._watch();
@@ -98,13 +99,15 @@ export class Application {
   }
 
   private async compile() {
-    // TODO
-    const routes = {
-      "/": "/pages/index.tsx",
-      "/about": "/pages/about.tsx",
-    };
-    await compileApp("./browser/app.tsx", this.modules);
-    await compilePages(routes, this.modules, this.appRoot);
+    await compileApp(`${this.config.appRoot}/src/pages/_app.tsx`, this.modules);
+    const routes = this.routeHandler.webRoutes;
+    console.log("COMPILE ROUTES");
+    console.log(routes);
+    await compilePages(
+      this.routeHandler.webRoutes,
+      this.modules,
+      this.appRoot,
+    );
     await writeModule(this.modules);
     await writeCompiledFiles(this.modules, this.appRoot);
   }

@@ -1,5 +1,5 @@
 import { TestController } from "../src/controllers/test_controller.ts";
-import { logger, Router } from ".https://deno.land/x/tails/mod.ts";
+import { logger, Router } from "../../../mod.ts";
 
 export default class extends Router {
   drawRoutes() {
@@ -17,7 +17,7 @@ export default class extends Router {
 
     this.routes("api", () => {
       // this.get("/create", TestController, "create");
-      this.gett({
+      this.get({
         path: "/create",
         module: TestController,
         method: "create",
@@ -25,13 +25,13 @@ export default class extends Router {
     });
 
     this.routes("web", () => {
-      this.gett(
+      this.get(
         {
           path: "/",
           page: "index.tsx",
         },
       );
-      this.gett(
+      this.get(
         {
           path: "/about",
           page: "about.tsx",

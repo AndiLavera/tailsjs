@@ -26,20 +26,36 @@ export class RouteHandler {
    * Should pass routes to bootstrap but hard coded for now
    */
   get mainJS() {
+    // TODO: Just move bootstrap code here
     return `
       import { bootstrap } from "./bootstrap.ts";
-      bootstrap({
-        "/": "/pages/index.tsx",
-        "/about": "/pages/about.tsx",
-      })
+      bootstrap()
       `;
   }
 
-  async init(bootstrapJS: string, modules: Modules) {
+  get webRoutes() {
+    const routes: Record<string, string> = {};
+    const webPipeline = this.router._pipelines.web.paths;
+
+    Object.keys(webPipeline)
+      .forEach((httpMethod) => {
+        Object.keys(webPipeline[httpMethod])
+          .forEach((path) => {
+            const page = webPipeline[httpMethod][path].page;
+            if (page) {
+              routes[path] = page;
+            }
+          });
+      });
+
+    return routes;
+  }
+
+  async init(bootstrapJS: string) {
     this.#bootstrap = bootstrapJS;
     await this.loadAppComponent();
     await this.loadUserRoutes();
-    this.generateJSRoutes(modules);
+    // this.generateJSRoutes(modules);
 
     // this.loadUserMiddleware(application, server);
     // const routers = this.loadUserRoutes(application, App);
@@ -52,6 +68,43 @@ export class RouteHandler {
     const router = new routes();
     router.drawRoutes();
     this.router = router;
+  }
+
+  generateJSRoutes(modules: Modules) {
+    console.log(modules);
+    const router = new ServerRouter();
+    const filePath = `file://${this.#config.appRoot}/src`;
+
+    console.log("generateJSRoutes - path:");
+    Object.keys(modules).forEach((route) => {
+      Object.keys(modules[route]).forEach((file) => {
+        const path = file
+          .replace(filePath, "")
+          .replace(".js", "")
+          .replace("/pages", "");
+        console.log(path);
+
+        router.get(
+          path,
+          (context: Context) => {
+            context.response.type = "application/javascript";
+            context.response.body = modules[route][file];
+          },
+        );
+      });
+    });
+
+    router
+      .get(this.#config.mainJSPath, (context: Context) => {
+        context.response.type = "application/javascript";
+        context.response.body = this.mainJS;
+      })
+      .get("/bootstrap.ts", (context: Context) => {
+        context.response.type = "application/javascript";
+        context.response.body = this.#bootstrap;
+      });
+
+    this.serverRouters.push(router);
   }
 
   private async loadUserRoutes() {
@@ -121,48 +174,9 @@ export class RouteHandler {
       });
   }
 
-  private generateJSRoutes(modules: Modules) {
-    const router = new ServerRouter();
-    const filePath = `file://${this.#config.appRoot}/src`;
-    console.log("filePath");
-    console.log(filePath);
-
-    console.log("pathWithoutJS");
-    Object.keys(modules).forEach((route) => {
-      Object.keys(modules[route]).forEach((file) => {
-        const pathWithJS = file.replace(filePath, "");
-        const pathWithoutJS = pathWithJS.replace(".js", "");
-        console.log(pathWithoutJS);
-
-        router.get(
-          // TODO: Hacky - Need better file path handling
-          pathWithoutJS.includes("app.tsx")
-            ? ("/" + pathWithoutJS.split("/").slice(-1)[0])
-            : pathWithoutJS,
-          (context: Context) => {
-            context.response.type = "application/javascript";
-            context.response.body = modules[route][file];
-          },
-        );
-      });
-    });
-
-    router
-      .get(this.#config.mainJSPath, (context: Context) => {
-        context.response.type = "application/javascript";
-        context.response.body = this.mainJS;
-      })
-      .get("/bootstrap.ts", (context: Context) => {
-        context.response.type = "application/javascript";
-        context.response.body = this.#bootstrap;
-      });
-
-    this.serverRouters.push(router);
-  }
-
   private async loadAppComponent() {
     const { default: appComponent } = await import(
-      `${path.resolve("./")}/browser/app.tsx`
+      `${this.#config.appRoot}/src/pages/_app.tsx`
     );
     this.appComponent = appComponent;
   }

@@ -40,6 +40,7 @@ export async function writeCompiledFiles(modules: Modules, appRoot: string) {
  * Compile app.tsx
  */
 export async function compileApp(path: string, modules: Modules) {
+  // TODO: Remove?
   const [diagnostics, bundle] = await Deno.compile(
     path,
     undefined,
@@ -69,9 +70,9 @@ export async function compilePages(
 ) {
   console.log("compilePages");
   for await (const path of Object.keys(routes)) {
-    console.log(appRoot + "/src" + routes[path]);
+    console.log(`${appRoot}/src/pages/${routes[path]}`);
     const [diagnostics, bundle] = await Deno.compile(
-      appRoot + "/src" + routes[path],
+      `${appRoot}/src/pages/${routes[path]}`,
       undefined,
       {
         lib: ["dom", "dom.iterable", "esnext"],

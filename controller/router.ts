@@ -64,20 +64,7 @@ export abstract class Router {
   //   };
   // }
 
-  get(
-    path: string,
-    module: typeof Controller,
-    method: string,
-  ): void {
-    if (this._paths.get) {
-      this._paths.get[path] = { module, method };
-    } else {
-      this._paths.get = {};
-      this._paths.get[path] = { module, method };
-    }
-  }
-
-  gett({ path, module, page, method }: {
+  get({ path, module, page, method }: {
     path: string;
     module?: typeof Controller;
     page?: string;
@@ -89,23 +76,12 @@ export abstract class Router {
     }
 
     if (module && method) {
-      if (this._paths.get) {
-        this._paths.get[path] = { module, method };
-      } else {
-        this._paths.get = {};
-        this._paths.get[path] = { module, method };
-      }
-
+      this._paths.get[path] = { module, method };
       return;
     }
 
     if (page) {
-      if (this._paths.get) {
-        this._paths.get[path] = { page };
-      } else {
-        this._paths.get = {};
-        this._paths.get[path] = { page };
-      }
+      this._paths.get[path] = { page };
     }
   }
 
