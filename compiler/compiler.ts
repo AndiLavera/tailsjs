@@ -7,6 +7,7 @@ import { Modules } from "../types.ts";
  * @param modules
  */
 export async function writeCompiledFiles(modules: Modules, appRoot: string) {
+  writeModulesManifest(modules, appRoot);
   const encoder = new TextEncoder();
   await ensureDir(`${appRoot}/.tails`);
 
@@ -78,8 +79,8 @@ export async function compilePages(
  *
  * @param modules
  */
-export async function writeModule(modules: Modules) {
+export async function writeModulesManifest(modules: Modules, appRoot: string) {
   const encoder = new TextEncoder();
   const data = encoder.encode(JSON.stringify(modules));
-  await Deno.writeFile("./modules.json", data);
+  await Deno.writeFile(`${appRoot}/.tails/modules.json`, data);
 }

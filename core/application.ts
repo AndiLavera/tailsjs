@@ -6,12 +6,7 @@ import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
 import { AssetHandler } from "../controller/asset_handler.ts";
 import { Modules } from "../types.ts";
-import {
-  compileApp,
-  compilePages,
-  writeCompiledFiles,
-  writeModule,
-} from "../compiler/compiler.ts";
+import { compilePages, writeCompiledFiles } from "../compiler/compiler.ts";
 
 export class Application {
   readonly config: Configuration;
@@ -99,7 +94,6 @@ export class Application {
     );
     console.log("compile:");
     console.log(this.modules);
-    await writeModule(this.modules);
     await writeCompiledFiles(this.modules, this.appRoot);
   }
 }
