@@ -4,7 +4,7 @@ import { ensureDir, path } from "../std.ts";
 import { createHTMLDocument } from "../vendor/deno-dom/document.ts";
 import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
-import { RouteHandler } from "../controller/route_handler.ts";
+import { AssetHandler } from "../controller/asset_handler.ts";
 import { Modules } from "../types.ts";
 import {
   compileApp,
@@ -16,9 +16,8 @@ import {
 export class Application {
   readonly config: Configuration;
   readonly appRoot: string;
-  private bootstrap?: string;
   private readonly modules: Modules;
-  private readonly routeHandler: RouteHandler;
+  private readonly assetHandler: AssetHandler;
   private readonly mode: "test" | "development" | "production";
   private readonly reload: boolean;
 
@@ -32,7 +31,7 @@ export class Application {
     this.reload = reload;
     this.modules = {};
     this.config = new Configuration(appDir, mode);
-    this.routeHandler = new RouteHandler(this.config);
+    this.assetHandler = new AssetHandler(this.config);
   }
 
   get isDev() {
@@ -52,7 +51,7 @@ export class Application {
   }
 
   get routers() {
-    return this.routeHandler.serverRouters;
+    return this.assetHandler.serverRouters;
   }
 
   async ready() {
@@ -65,12 +64,6 @@ export class Application {
   }
 
   private async init(reload: boolean) {
-    // const walkOptions = {
-    //   includeDirs: false,
-    //   exts: [".js", ".ts", ".mjs"],
-    //   skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
-    // };
-    // const apiDir = path.join(this.srcDir, "api");
     const pagesDir = path.join(this.srcDir, "pages");
 
     if (!(existsDirSync(pagesDir))) {
@@ -85,13 +78,11 @@ export class Application {
       await ensureDir(this.buildDir);
     }
 
-    await this.routeHandler.init(
-      await this.loadBootstrap(),
-    );
+    await this.assetHandler.init();
 
-    await this.compile(); // sets `this.modules`
+    await this.compile();
 
-    await this.routeHandler.generateJSRoutes(this.modules);
+    await this.assetHandler.generateJSRoutes(this.modules);
 
     if (this.isDev) {
       // this._watch();
@@ -99,27 +90,21 @@ export class Application {
   }
 
   private async compile() {
-    await compileApp(`${this.config.appRoot}/src/pages/_app.tsx`, this.modules);
-    const routes = this.routeHandler.webRoutes;
-    console.log("COMPILE ROUTES");
-    console.log(routes);
+    const routes = this.assetHandler.webRoutes;
+    injectDefaultPages(routes);
     await compilePages(
-      this.routeHandler.webRoutes,
+      routes,
       this.modules,
       this.appRoot,
     );
+    console.log("compile:");
+    console.log(this.modules);
     await writeModule(this.modules);
     await writeCompiledFiles(this.modules, this.appRoot);
   }
+}
 
-  /**
-   * Load boostrap file
-   */
-  private async loadBootstrap() {
-    const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(
-      path.resolve("./") + "/browser/bootstrap.js",
-    );
-    return decoder.decode(data);
-  }
+function injectDefaultPages(routes: Record<string, string>) {
+  routes["/_app.tsx"] = "_app.tsx";
+  // TODO: Add _document, _loading, _error
 }

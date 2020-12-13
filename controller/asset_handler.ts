@@ -6,7 +6,7 @@ import { path, walk } from "../std.ts";
 import { Middleware, Modules, Paths } from "../types.ts";
 import { generateHTMLRoutes } from "../utils/generate_html_routes.tsx";
 
-export class RouteHandler {
+export class AssetHandler {
   router: Router;
   serverRouters: ServerRouter[];
   // TODO: any
@@ -51,14 +51,10 @@ export class RouteHandler {
     return routes;
   }
 
-  async init(bootstrapJS: string) {
-    this.#bootstrap = bootstrapJS;
+  async init() {
+    this.#bootstrap = await this.loadBootstrap();
     await this.loadAppComponent();
     await this.loadUserRoutes();
-    // this.generateJSRoutes(modules);
-
-    // this.loadUserMiddleware(application, server);
-    // const routers = this.loadUserRoutes(application, App);
   }
 
   async prepareRouter() {
@@ -179,5 +175,16 @@ export class RouteHandler {
       `${this.#config.appRoot}/src/pages/_app.tsx`
     );
     this.appComponent = appComponent;
+  }
+
+  /**
+   * Load boostrap file
+   */
+  private async loadBootstrap() {
+    const decoder = new TextDecoder("utf-8");
+    const data = await Deno.readFile(
+      path.resolve("./") + "/browser/bootstrap.js",
+    );
+    return decoder.decode(data);
   }
 }

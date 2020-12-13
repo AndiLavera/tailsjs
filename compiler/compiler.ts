@@ -1,5 +1,5 @@
-import { ensureDir, path } from "../std.ts";
-import { Modules, Routes } from "../types.ts";
+import { ensureDir } from "../std.ts";
+import { Modules } from "../types.ts";
 
 /**
  * Writes all files in `modules` to `./.tails/`
@@ -37,28 +37,8 @@ export async function writeCompiledFiles(modules: Modules, appRoot: string) {
 }
 
 /**
- * Compile app.tsx
- */
-export async function compileApp(path: string, modules: Modules) {
-  // TODO: Remove?
-  const [diagnostics, bundle] = await Deno.compile(
-    path,
-    undefined,
-    {
-      lib: ["dom", "dom.iterable", "esnext"],
-    },
-  );
-
-  if (diagnostics) {
-    console.log(diagnostics);
-    throw new Error();
-  }
-
-  modules["/app.tsx"] = bundle;
-}
-
-/**
- *  Compile all pages found in routes
+ *  Compile all pages found in routes and inject the
+ *  output into modules
  *
  * @param routes
  * @param modules
