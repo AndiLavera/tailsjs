@@ -31,6 +31,7 @@ export interface Routes {
   };
 }
 
+// TODO: any
 export interface Modules {
   [key: string]: any;
 }

@@ -41,6 +41,8 @@ export class Configuration {
 
   router: Router;
 
+  mainJSPath: string;
+
   readonly appRoot: string;
   readonly mode: "test" | "development" | "production";
 
@@ -61,8 +63,10 @@ export class Configuration {
     this.srcDir = "/src";
     this.outputDir = "/dist";
     this.baseUrl = "/";
+    this.mainJSPath = "/main.js";
     this.defaultLocale = "en";
     this.env = {};
+    // TODO: Remove
     this.router = new FakeRouter();
     this.locales = [];
     this.buildTarget = mode === "development" ? "es2018" : "es2015";
@@ -92,7 +96,6 @@ export class Configuration {
     await this.loadImportMap();
     await this.loadConfigFiles(config);
     await this.setUserConfiguration(config);
-    await this.loadRoutes();
   }
 
   private async loadImportMap() {
@@ -229,14 +232,5 @@ export class Configuration {
         log.warn("bad postcss.config.json", e.message);
       }
     }
-  }
-
-  async loadRoutes() {
-    const routesPath = path.join(this.appRoot, "config/routes.ts");
-    const { default: routes } = await import("file://" + routesPath);
-
-    const router = new routes();
-    router.drawRoutes();
-    this.router = router;
   }
 }
