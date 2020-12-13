@@ -1,5 +1,5 @@
 import { Context, React, renderToString, Router } from "../deps.ts";
-import { Paths } from "../types.ts";
+import { Paths, Route } from "../types.ts";
 
 // TODO: Duplicate
 async function importComponent(path: string) {
@@ -8,7 +8,7 @@ async function importComponent(path: string) {
 
 export async function generateHTMLRoutes(
   App: any,
-  routes: Paths,
+  routes: Record<string, Route>,
   router: Router,
   mainJSPath: string,
   appRoot: string,

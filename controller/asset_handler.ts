@@ -3,7 +3,7 @@ import { Router } from "./router.ts";
 import { Context, Router as ServerRouter } from "../deps.ts";
 import { Configuration } from "../core/configuration.ts";
 import { path, walk } from "../std.ts";
-import { Middleware, Modules, Paths } from "../types.ts";
+import { Middleware, Modules, Paths, Route } from "../types.ts";
 import { generateHTMLRoutes } from "../utils/generate_html_routes.tsx";
 
 export class AssetHandler {
@@ -137,7 +137,7 @@ export class AssetHandler {
 
   // TODO: Implement other http methods
   private setRoute(
-    routes: any,
+    routes: Record<string, Route>,
     router: ServerRouter,
     httpMethod: string,
     pipeline: string,
@@ -151,6 +151,13 @@ export class AssetHandler {
             router,
             "/main.js",
             this.#config.appRoot,
+          );
+        }
+
+        if (pipeline === "api") {
+          this.generateAPIRoutes(
+            routes,
+            router,
           );
         }
 
@@ -186,5 +193,20 @@ export class AssetHandler {
       path.resolve("./") + "/browser/bootstrap.js",
     );
     return decoder.decode(data);
+  }
+
+  private generateAPIRoutes(
+    routes: Record<string, Route>,
+    router: ServerRouter,
+  ) {
+    Object.keys(routes)
+      .forEach((path) => {
+        const route = routes[path];
+        if (route.module) {
+          const controller = this.router._fetchController(route.module);
+          const method = route.method || "";
+          router.get(path, controller[method]);
+        }
+      });
   }
 }

@@ -5,6 +5,7 @@ import { Middleware, Paths, Routes } from "../types.ts";
 export abstract class Router {
   _pipelines: Routes;
   _paths: Paths;
+  _instantiatedControllers: Record<string, Controller>;
 
   abstract drawRoutes(): void;
 
@@ -20,6 +21,7 @@ export abstract class Router {
       },
     };
     this._paths = pathsFactory();
+    this._instantiatedControllers = {};
   }
 
   pipeline(pipe: string, callback: () => Middleware): void {
@@ -38,6 +40,22 @@ export abstract class Router {
       // TODO: Pipeline doesn't exist
       throw new Error();
     }
+  }
+
+  /**
+   * Find or instaniate a controller. Used so multiple methods inside
+   * a controller share the same execution context.
+   *
+   * @param module
+   */
+  _fetchController(module: new () => Controller) {
+    if (this._instantiatedControllers[String(module)]) {
+      return this._instantiatedControllers[String(module)];
+    }
+
+    const controller = new module();
+    this._instantiatedControllers[String(module)] = controller;
+    return controller;
   }
 
   // connect(
@@ -66,13 +84,13 @@ export abstract class Router {
 
   get({ path, module, page, method }: {
     path: string;
-    module?: typeof Controller;
+    module?: new () => Controller;
     page?: string;
     method?: string;
   }): void {
     if (!module && !page) {
       // TODO: Custom error
-      throw new Error("Must supply a module or method");
+      throw new Error("Must supply a module & method or page");
     }
 
     if (module && method) {
@@ -123,7 +141,7 @@ export abstract class Router {
 
   post(
     path: string,
-    module: typeof Controller,
+    module: new () => Controller,
     method: string,
   ): void {
     if (this._paths.post) {

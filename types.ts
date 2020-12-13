@@ -2,7 +2,7 @@ import { Context } from "./deps.ts";
 import Controller from "./controller/controller.ts";
 
 export interface Route {
-  module?: typeof Controller;
+  module?: new () => Controller;
   method?: string;
   page?: string;
 }
