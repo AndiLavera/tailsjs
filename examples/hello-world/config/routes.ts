@@ -16,7 +16,6 @@ export default class extends Router {
     });
 
     this.routes("api", () => {
-      // this.get("/create", TestController, "create");
       this.get({
         path: "/create",
         module: TestController,

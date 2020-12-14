@@ -21,21 +21,19 @@ export async function generateHTMLRoutes(
       `${appRoot}/src/pages/${routes[route].page}`,
     );
 
-    const html = `<html>
+    router.get(route, (context: Context) => {
+      context.response.type = "text/html";
+      context.response.body = `<html>
       <head>
         <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/pure-min.css">
       </head>
       <body>
         <main id="app">${
-      renderToString(<App Page={Component} pageProps={{}} />)
-    }</main>
+        renderToString(<App Page={Component} pageProps={{}} />)
+      }</main>
         <script type="module" src="${mainJSPath}"></script>
       </body>
     </html>`;
-
-    router.get(route, (context: Context) => {
-      context.response.type = "text/html";
-      context.response.body = html;
     });
   });
 

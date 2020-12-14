@@ -205,7 +205,7 @@ export class AssetHandler {
         if (route.module) {
           const controller = this.router._fetchController(route.module);
           const method = route.method || "";
-          router.get(path, controller[method]);
+          router.get(`/api${path}`, controller[method]);
         }
       });
   }
