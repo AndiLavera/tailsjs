@@ -1,5 +1,11 @@
-import { Context, React, renderToString, Router } from "../deps.ts";
-import { Paths, Route } from "../types.ts";
+import {
+  ComponentType,
+  Context,
+  React,
+  renderToString,
+  Router,
+} from "../deps.ts";
+import { Route } from "../types.ts";
 
 // TODO: Duplicate
 async function importComponent(path: string) {
@@ -7,18 +13,18 @@ async function importComponent(path: string) {
 }
 
 export async function generateHTMLRoutes(
-  App: any,
+  App: ComponentType<any>,
   routes: Record<string, Route>,
   router: Router,
   mainJSPath: string,
-  appRoot: string,
+  assetPath: (asset: string) => string,
 ) {
   console.log("generateHTMLRoutes");
   await Object.keys(routes).forEach(async (route) => {
     console.log(`route: ${route}`);
-    console.log(`html page: ${appRoot}/src/pages/${routes[route].page}`);
+    console.log(`html page: ${assetPath(`pages/${routes[route].page}`)}`);
     const Component = await importComponent(
-      `${appRoot}/src/pages/${routes[route].page}`,
+      assetPath(`pages/${routes[route].page}`),
     );
 
     router.get(route, (context: Context) => {

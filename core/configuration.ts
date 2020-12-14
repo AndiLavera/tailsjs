@@ -12,8 +12,6 @@ import FakeRouter from "../controller/fake_router.ts";
 * user config files.
 */
 export class Configuration {
-  /** `srcDir` to put your application source code (default is '/'). */
-  srcDir: string;
   /** `env` appends env variables (use `Deno.env.get(key)` to get an env variable) */
   env: Record<string, string>;
   /** `buildTarget` specifies the build target for **tsc** (possible values: '**ES2015**' - '**ES2020**' | '**ESNext**', default is **ES2015** for `production` and **ES2018** for `development`). */
@@ -60,7 +58,6 @@ export class Configuration {
   ) {
     this.appRoot = path.resolve(appDir);
     this.mode = mode;
-    this.srcDir = "/src";
     this.outputDir = "/dist";
     this.baseUrl = "/";
     this.mainJSPath = "/main.js";
@@ -89,6 +86,10 @@ export class Configuration {
       `config/config.${mode}.ts`,
       `config/config.${mode}.js`,
     ];
+  }
+
+  get isDev() {
+    return this.mode === "development";
   }
 
   async loadConfig() {
@@ -136,7 +137,6 @@ export class Configuration {
   private async setUserConfiguration(config: Record<string, any>) {
     const { navigator } = globalThis as any;
     const {
-      srcDir,
       ouputDir,
       baseUrl,
       buildTarget,
@@ -148,9 +148,6 @@ export class Configuration {
       plugins,
       postcss,
     } = config;
-    if (util.isNEString(srcDir)) {
-      Object.assign(this, { srcDir: util.cleanPath(srcDir) });
-    }
 
     if (util.isNEString(ouputDir)) {
       Object.assign(this, { ouputDir: util.cleanPath(ouputDir) });

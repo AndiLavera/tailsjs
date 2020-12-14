@@ -1,6 +1,6 @@
 import FakeRouter from "../controller/fake_router.ts";
 import { Router } from "./router.ts";
-import { Context, Router as ServerRouter } from "../deps.ts";
+import { ComponentType, Context, Router as ServerRouter } from "../deps.ts";
 import { Configuration } from "../core/configuration.ts";
 import { path, walk } from "../std.ts";
 import { Middleware, Modules, Paths, Route } from "../types.ts";
@@ -9,8 +9,8 @@ import { generateHTMLRoutes } from "../utils/generate_html_routes.tsx";
 export class AssetHandler {
   router: Router;
   serverRouters: ServerRouter[];
-  // TODO: any
-  appComponent?: any;
+  // deno-lint-ignore no-explicit-any
+  appComponent?: ComponentType<any>;
   #config: Configuration;
   #bootstrap: string;
 
@@ -25,7 +25,7 @@ export class AssetHandler {
    * Main bundle all pages should fetch
    * Should pass routes to bootstrap but hard coded for now
    */
-  get mainJS() {
+  get mainJS(): string {
     // TODO: Just move bootstrap code here
     return `
       import { bootstrap } from "./bootstrap.ts";
@@ -33,7 +33,35 @@ export class AssetHandler {
       `;
   }
 
-  get webRoutes() {
+  /**
+   * Returns the path that should be used
+   * when fetch assets.
+   */
+  get assetDir(): string {
+    if (this.#config.isDev) {
+      return `${this.#config.appRoot}/src`;
+    }
+
+    return `${this.#config.appRoot}/.tails`;
+  }
+
+  /**
+   * Handles returning the full path of an asset
+   * based on the current environment mode.
+   *
+   * @param asset - The asset to be fetched
+   * Ex: `pages/_app.tsx` or `components/logo.tsx`
+   */
+  assetPath(asset: string): string {
+    const path = this.assetDir;
+    if (this.#config.isDev) {
+      return `${path}/${asset}`;
+    }
+
+    return `${path}/${asset}.js`;
+  }
+
+  get webRoutes(): Record<string, string> {
     const routes: Record<string, string> = {};
     const webPipeline = this.router._pipelines.web.paths;
 
@@ -51,13 +79,13 @@ export class AssetHandler {
     return routes;
   }
 
-  async init() {
+  async init(): Promise<void> {
     this.#bootstrap = await this.loadBootstrap();
     await this.loadAppComponent();
     await this.loadUserRoutes();
   }
 
-  async prepareRouter() {
+  async prepareRouter(): Promise<void> {
     const routesPath = path.join(this.#config.appRoot, "config/routes.ts");
     const { default: routes } = await import("file://" + routesPath);
 
@@ -66,7 +94,7 @@ export class AssetHandler {
     this.router = router;
   }
 
-  generateJSRoutes(modules: Modules) {
+  generateJSRoutes(modules: Modules): void {
     console.log(modules);
     const router = new ServerRouter();
     const filePath = `file://${this.#config.appRoot}/src`;
@@ -103,7 +131,7 @@ export class AssetHandler {
     this.serverRouters.push(router);
   }
 
-  private async loadUserRoutes() {
+  private async loadUserRoutes(): Promise<void> {
     await this.prepareRouter();
     const pipelines = this.router._pipelines;
 
@@ -119,12 +147,12 @@ export class AssetHandler {
     }
   }
 
-  private setMiddleware(middlewares: Middleware, router: ServerRouter) {
+  private setMiddleware(middlewares: Middleware, router: ServerRouter): void {
     middlewares
       .forEach((middleware) => router.use(middleware));
   }
 
-  async setStaticMiddleware(router: ServerRouter) {
+  async setStaticMiddleware(router: ServerRouter): Promise<void> {
     for await (
       const { path } of walk("middleware", { exts: [".ts"] })
     ) {
@@ -136,21 +164,24 @@ export class AssetHandler {
   }
 
   // TODO: Implement other http methods
+  // TODO: Too many arguments
   private setRoute(
     routes: Record<string, Route>,
     router: ServerRouter,
     httpMethod: string,
     pipeline: string,
-  ) {
+    // deno-lint-ignore no-explicit-any
+    App: ComponentType<any>,
+  ): void {
     switch (httpMethod) {
       case "get":
         if (pipeline === "web") {
           generateHTMLRoutes(
-            this.appComponent,
+            App,
             routes,
             router,
             "/main.js",
-            this.#config.appRoot,
+            this.assetPath.bind(this),
           );
         }
 
@@ -169,25 +200,36 @@ export class AssetHandler {
     paths: Paths,
     router: ServerRouter,
     pipeline: string,
-  ) {
+  ): void {
+    const App = this.appComponent;
+    if (!App) {
+      // TODO: App should be defined
+      throw new Error();
+    }
+
     Object.keys(paths)
       .forEach((httpMethod) => {
         const routes = paths[httpMethod];
-        this.setRoute(routes, router, httpMethod, pipeline);
+        this.setRoute(routes, router, httpMethod, pipeline, App);
       });
   }
 
-  private async loadAppComponent() {
-    const { default: appComponent } = await import(
-      `${this.#config.appRoot}/src/pages/_app.tsx`
-    );
-    this.appComponent = appComponent;
+  private async loadAppComponent(): Promise<void> {
+    try {
+      const { default: appComponent } = await import(
+        this.assetPath("pages/_app.tsx")
+      );
+      this.appComponent = appComponent;
+    } catch {
+      // TODO: Can't load app error
+      throw new Error("Cannot find pages/_app.tsx");
+    }
   }
 
   /**
    * Load boostrap file
    */
-  private async loadBootstrap() {
+  private async loadBootstrap(): Promise<string> {
     const decoder = new TextDecoder("utf-8");
     const data = await Deno.readFile(
       path.resolve("./") + "/browser/bootstrap.js",
@@ -198,7 +240,7 @@ export class AssetHandler {
   private generateAPIRoutes(
     routes: Record<string, Route>,
     router: ServerRouter,
-  ) {
+  ): void {
     Object.keys(routes)
       .forEach((path) => {
         const route = routes[path];

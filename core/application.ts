@@ -1,7 +1,6 @@
 import { existsDirSync } from "../fs.ts";
 import log from "../logger/logger.ts";
 import { ensureDir, path } from "../std.ts";
-import { createHTMLDocument } from "../vendor/deno-dom/document.ts";
 import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
 import { AssetHandler } from "../controller/asset_handler.ts";
@@ -29,13 +28,9 @@ export class Application {
     this.assetHandler = new AssetHandler(this.config);
   }
 
-  get isDev() {
-    return this.mode === "development";
-  }
-
-  get srcDir() {
-    return path.join(this.appRoot, this.config.srcDir);
-  }
+  // get isDev() {
+  //   return this.mode === "development";
+  // }
 
   get buildDir() {
     return path.join(
@@ -59,7 +54,7 @@ export class Application {
   }
 
   private async init(reload: boolean) {
-    const pagesDir = path.join(this.srcDir, "pages");
+    const pagesDir = path.join(this.appRoot, "src/pages");
 
     if (!(existsDirSync(pagesDir))) {
       log.fatal(`'pages' directory not found.`);
@@ -79,7 +74,7 @@ export class Application {
 
     await this.assetHandler.generateJSRoutes(this.modules);
 
-    if (this.isDev) {
+    if (this.config.isDev) {
       // this._watch();
     }
   }
