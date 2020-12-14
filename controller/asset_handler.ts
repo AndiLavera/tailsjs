@@ -53,17 +53,19 @@ export class AssetHandler {
    * Ex: `pages/_app.tsx` or `components/logo.tsx`
    */
   assetPath(asset: string): string {
-    const path = this.assetDir;
+    const assetPath = this.assetDir;
     if (this.#config.isDev) {
-      return `${path}/${asset}`;
+      return `${assetPath}/${asset}`;
     }
 
-    return `${path}/${asset}.js`;
+    return `${assetPath}/${asset}.js`;
   }
 
   get webRoutes(): Record<string, string> {
     const routes: Record<string, string> = {};
-    const webPipeline = this.router._pipelines.web.paths;
+    const webPipeline = {
+      ...this.router._pipelines.web.paths,
+    };
 
     Object.keys(webPipeline)
       .forEach((httpMethod) => {
@@ -95,28 +97,27 @@ export class AssetHandler {
   }
 
   generateJSRoutes(modules: Modules): void {
-    console.log(modules);
     const router = new ServerRouter();
-    const filePath = `file://${this.#config.appRoot}/src`;
 
-    console.log("generateJSRoutes - path:");
-    Object.keys(modules).forEach((route) => {
-      Object.keys(modules[route]).forEach((file) => {
-        const path = file
-          .replace(filePath, "")
-          .replace(".js", "")
-          .replace("/pages", "");
-        console.log(path);
+    console.log("JS ASSET ROUTES:\n");
+    Object.keys(modules).forEach((key) => {
+      const file = modules[key];
+      const path = key
+        .replace(".js", "")
+        .replace("/pages", "");
 
-        router.get(
-          path,
-          (context: Context) => {
-            context.response.type = "application/javascript";
-            context.response.body = modules[route][file];
-          },
-        );
-      });
+      console.log(path);
+
+      router.get(
+        path,
+        (context: Context) => {
+          context.response.type = "application/javascript";
+          context.response.body = file;
+        },
+      );
     });
+
+    console.log("\n");
 
     router
       .get(this.#config.mainJSPath, (context: Context) => {

@@ -5,7 +5,7 @@ import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
 import { AssetHandler } from "../controller/asset_handler.ts";
 import { Modules } from "../types.ts";
-import { compilePages, writeCompiledFiles } from "../compiler/compiler.ts";
+import { compileApp } from "../compiler/compiler.ts";
 
 export class Application {
   readonly config: Configuration;
@@ -82,18 +82,21 @@ export class Application {
   private async compile() {
     const routes = this.assetHandler.webRoutes;
     injectDefaultPages(routes);
-    await compilePages(
-      routes,
+
+    await compileApp(
       this.modules,
+      this.assetHandler.assetPath.bind(this.assetHandler),
+      this.assetHandler.assetDir,
       this.appRoot,
     );
-    console.log("compile:");
+
+    console.log("COMPILED MODULES:\n");
     console.log(this.modules);
-    await writeCompiledFiles(this.modules, this.appRoot);
+    console.log("\n");
   }
 }
 
-function injectDefaultPages(routes: Record<string, string>) {
+function injectDefaultPages(routes: Record<string, string>): void {
   routes["/_app.tsx"] = "_app.tsx";
   // TODO: Add _document, _loading, _error
 }

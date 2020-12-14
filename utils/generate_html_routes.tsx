@@ -19,10 +19,10 @@ export async function generateHTMLRoutes(
   mainJSPath: string,
   assetPath: (asset: string) => string,
 ) {
-  console.log("generateHTMLRoutes");
+  console.log("HTML ROUTES:\n");
   await Object.keys(routes).forEach(async (route) => {
-    console.log(`route: ${route}`);
-    console.log(`html page: ${assetPath(`pages/${routes[route].page}`)}`);
+    console.log(`Route: ${route}`);
+    console.log(`Page: ${assetPath(`pages/${routes[route].page}`)}`);
     const Component = await importComponent(
       assetPath(`pages/${routes[route].page}`),
     );
@@ -42,6 +42,8 @@ export async function generateHTMLRoutes(
     </html>`;
     });
   });
+
+  console.log("\n");
 
   return router;
 }
