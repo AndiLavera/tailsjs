@@ -1,5 +1,6 @@
 import { ensureDir, walk } from "../std.ts";
 import { Modules } from "../types.ts";
+import { ensureTextFile } from "../fs.ts";
 
 async function compile(path: string) {
   const [diagnostics, bundle] = await Deno.compile(path);
@@ -12,7 +13,7 @@ async function compile(path: string) {
   return bundle;
 }
 
-export async function compileApp(
+export async function compileApplication(
   modules: Modules,
   assetPath: (asset: string) => string,
   assetDir: string,
@@ -46,34 +47,19 @@ export async function compileApp(
 }
 
 /**
- * Writes all files in `modules` to `./.tails/`
+ * Writes all files in `modules` to `${appRoot}/.tails/`
  *
  * @param modules
  */
-export async function writeFiles(modules: Modules, appRoot: string) {
-  const writeManifest = async (
-    encoder: TextEncoder,
-    modules: Modules,
-    appRoot: string,
-  ): Promise<void> => {
-    const data = encoder.encode(JSON.stringify(modules));
-    await Deno.writeFile(`${appRoot}/.tails/modules.json`, data);
-  };
-
-  const encoder = new TextEncoder();
+async function writeFiles(modules: Modules, appRoot: string) {
   await ensureDir(`${appRoot}/.tails`);
-  await writeManifest(encoder, modules, appRoot);
+  ensureTextFile(
+    `${appRoot}/.tails/modules.json`,
+    JSON.stringify(modules),
+  );
 
   for (const key in modules) {
     const file = modules[key];
-    const dirs = key.split("/").slice(1, -1);
-
-    for await (const dir of dirs) {
-      await ensureDir(`${appRoot}/.tails/src/${dir}`);
-    }
-    await Deno.writeFile(
-      `${appRoot}/.tails/src/${key}`,
-      encoder.encode(file),
-    );
+    ensureTextFile(`${appRoot}/.tails/src/${key}`, file);
   }
 }

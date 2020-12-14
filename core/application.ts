@@ -5,7 +5,7 @@ import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
 import { AssetHandler } from "../controller/asset_handler.ts";
 import { Modules } from "../types.ts";
-import { compileApp } from "../compiler/compiler.ts";
+import { compileApplication } from "../compiler/compiler.ts";
 
 export class Application {
   readonly config: Configuration;
@@ -53,6 +53,10 @@ export class Application {
     );
   }
 
+  async build() {
+    await this.ready();
+  }
+
   private async init(reload: boolean) {
     const pagesDir = path.join(this.appRoot, "src/pages");
 
@@ -72,7 +76,7 @@ export class Application {
 
     await this.compile();
 
-    await this.assetHandler.generateJSRoutes(this.modules);
+    this.assetHandler.generateJSRoutes(this.modules);
 
     if (this.config.isDev) {
       // this._watch();
@@ -80,10 +84,7 @@ export class Application {
   }
 
   private async compile() {
-    const routes = this.assetHandler.webRoutes;
-    injectDefaultPages(routes);
-
-    await compileApp(
+    await compileApplication(
       this.modules,
       this.assetHandler.assetPath.bind(this.assetHandler),
       this.assetHandler.assetDir,
@@ -94,9 +95,4 @@ export class Application {
     console.log(this.modules);
     console.log("\n");
   }
-}
-
-function injectDefaultPages(routes: Record<string, string>): void {
-  routes["/_app.tsx"] = "_app.tsx";
-  // TODO: Add _document, _loading, _error
 }

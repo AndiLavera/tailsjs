@@ -88,11 +88,6 @@ export abstract class Router {
     page?: string;
     method?: string;
   }): void {
-    if (!module && !page) {
-      // TODO: Custom error
-      throw new Error("Must supply a module & method or page");
-    }
-
     if (module && method) {
       this._paths.get[path] = { module, method };
       return;
@@ -101,6 +96,8 @@ export abstract class Router {
     if (page) {
       this._paths.get[path] = { page };
     }
+
+    throw new Error("Must supply a module & method or page");
   }
 
   // head(

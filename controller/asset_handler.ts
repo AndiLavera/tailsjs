@@ -33,6 +33,14 @@ export class AssetHandler {
       `;
   }
 
+  get buildDir() {
+    return path.join(
+      this.#config.appRoot,
+      ".tails",
+      this.#config.mode + "." + this.#config.buildTarget,
+    );
+  }
+
   /**
    * Returns the path that should be used
    * when fetch assets.
@@ -42,7 +50,8 @@ export class AssetHandler {
       return `${this.#config.appRoot}/src`;
     }
 
-    return `${this.#config.appRoot}/.tails`;
+    // TODO: production should be `${this.#config.appRoot}/.tails`
+    return `${this.#config.appRoot}${this.#config.outputDir}/src`;
   }
 
   /**
@@ -61,29 +70,10 @@ export class AssetHandler {
     return `${assetPath}/${asset}.js`;
   }
 
-  get webRoutes(): Record<string, string> {
-    const routes: Record<string, string> = {};
-    const webPipeline = {
-      ...this.router._pipelines.web.paths,
-    };
-
-    Object.keys(webPipeline)
-      .forEach((httpMethod) => {
-        Object.keys(webPipeline[httpMethod])
-          .forEach((path) => {
-            const page = webPipeline[httpMethod][path].page;
-            if (page) {
-              routes[path] = page;
-            }
-          });
-      });
-
-    return routes;
-  }
-
   async init(): Promise<void> {
     this.#bootstrap = await this.loadBootstrap();
-    await this.loadAppComponent();
+    this.appComponent = await this.loadAppComponent();
+    // TODO: Should server call this so build doesn't?
     await this.loadUserRoutes();
   }
 
@@ -215,12 +205,12 @@ export class AssetHandler {
       });
   }
 
-  private async loadAppComponent(): Promise<void> {
+  private async loadAppComponent(): Promise<ComponentType<any>> {
     try {
       const { default: appComponent } = await import(
         this.assetPath("pages/_app.tsx")
       );
-      this.appComponent = appComponent;
+      return appComponent;
     } catch {
       // TODO: Can't load app error
       throw new Error("Cannot find pages/_app.tsx");

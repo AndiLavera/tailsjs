@@ -2,7 +2,7 @@ import log from "../logger/logger.ts";
 
 export const helpMessage = `
 Usage:
-    aleph dev <dir> [...options]
+    aleph start <dir> [...options]
 
 <dir> represents the directory of Aleph.js app,
 if the <dir> is empty, the current directory will be used.
@@ -30,5 +30,5 @@ export default async function (
   const port = parseInt(String(options.p || options.port || "3000"));
   ensureValidPort(port);
 
-  start(appDir, port, "development", Boolean(options.r || options.reload));
+  start(appDir, port, "production", Boolean(options.r || options.reload));
 }
