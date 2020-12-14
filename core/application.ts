@@ -46,15 +46,41 @@ export class Application {
 
   async ready() {
     const startTime = performance.now();
+
     await this.config.loadConfig();
     await this.init(this.reload);
+    await this.compile();
+    await this.assetHandler.init(this.modules);
+
     log.info(
       "Project loaded in " + Math.round(performance.now() - startTime) + "ms",
     );
   }
 
   async build() {
-    await this.ready();
+    const startTime = performance.now();
+
+    await this.config.loadConfig();
+    await this.compile();
+
+    log.info(
+      "Project built in " + Math.round(performance.now() - startTime) + "ms",
+    );
+  }
+
+  async start() {
+    const startTime = performance.now();
+    await this.config.loadConfig();
+    // TODO: Load manifest
+    await this.assetHandler.init(this.modules);
+
+    if (this.config.isDev) {
+      // this._watch();
+    }
+
+    log.info(
+      "Project started in " + Math.round(performance.now() - startTime) + "ms",
+    );
   }
 
   private async init(reload: boolean) {
@@ -70,16 +96,6 @@ export class Application {
       }
 
       await ensureDir(this.buildDir);
-    }
-
-    await this.assetHandler.init();
-
-    await this.compile();
-
-    this.assetHandler.generateJSRoutes(this.modules);
-
-    if (this.config.isDev) {
-      // this._watch();
     }
   }
 

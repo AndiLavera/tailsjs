@@ -50,8 +50,9 @@ export class AssetHandler {
       return `${this.#config.appRoot}/src`;
     }
 
-    // TODO: production should be `${this.#config.appRoot}/.tails`
-    return `${this.#config.appRoot}${this.#config.outputDir}/src`;
+    // TODO: production should be:
+    // `${this.#config.appRoot}${this.#config.outputDir}/src
+    return `${this.#config.appRoot}/src`;
   }
 
   /**
@@ -62,19 +63,16 @@ export class AssetHandler {
    * Ex: `pages/_app.tsx` or `components/logo.tsx`
    */
   assetPath(asset: string): string {
-    const assetPath = this.assetDir;
-    if (this.#config.isDev) {
-      return `${assetPath}/${asset}`;
-    }
-
-    return `${assetPath}/${asset}.js`;
+    const assetDir = this.assetDir;
+    return `${assetDir}/${asset}`;
   }
 
-  async init(): Promise<void> {
+  async init(modules: Modules): Promise<void> {
     this.#bootstrap = await this.loadBootstrap();
     this.appComponent = await this.loadAppComponent();
     // TODO: Should server call this so build doesn't?
     await this.loadUserRoutes();
+    this.generateJSRoutes(modules);
   }
 
   async prepareRouter(): Promise<void> {
