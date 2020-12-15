@@ -130,7 +130,6 @@ export class RouteHandler {
             Document,
             routes,
             router,
-            "/main.js",
             this.config.assetPath.bind(this.config),
           );
         }

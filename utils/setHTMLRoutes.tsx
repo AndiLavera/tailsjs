@@ -17,7 +17,6 @@ export async function setHTMLRoutes(
   Document: ComponentType<any>,
   routes: Record<string, Route>,
   router: Router,
-  mainJSPath: string,
   assetPath: (asset: string) => string,
 ) {
   console.log("HTML ROUTES:\n");
@@ -30,15 +29,23 @@ export async function setHTMLRoutes(
 
     router.get(route, (context: Context) => {
       context.response.type = "text/html";
-      context.response.body = renderToString(
-        <Document>
-          <App Page={Component} pageProps={{}} />
-        </Document>,
-      );
+      context.response.body = generateHTML(App, Document, Component);
     });
   });
 
   console.log("\n");
 
   return router;
+}
+
+export function generateHTML(
+  App: ComponentType<any>,
+  Document: ComponentType<any>,
+  Component: ComponentType<any>,
+): string {
+  return renderToString(
+    <Document>
+      <App Page={Component} pageProps={{}} />
+    </Document>,
+  );
 }

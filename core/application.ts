@@ -46,7 +46,7 @@ export class Application {
    * project is following our conventions, compiling the project
    * & setting all the proper routes.
    */
-  async ready() {
+  async ready(): Promise<void> {
     const startTime = performance.now();
 
     await this.config.loadConfig();
@@ -63,7 +63,7 @@ export class Application {
    * Handles loading configuration files, ensuring the users
    * project is following our conventions & compiling the project.
    */
-  async build() {
+  async build(): Promise<void> {
     const startTime = performance.now();
 
     await this.config.loadConfig();
@@ -80,7 +80,7 @@ export class Application {
    * project from the compiled `manifest.json` & setting all
    * the proper routes.
    */
-  async start() {
+  async start(): Promise<void> {
     const startTime = performance.now();
     await this.config.loadConfig();
     await this.moduleHandler.init();
@@ -91,7 +91,7 @@ export class Application {
     );
   }
 
-  private async init(reload: boolean) {
+  private async init(reload: boolean): Promise<void> {
     const pagesDir = path.join(this.appRoot, "src/pages");
 
     if (!(existsDirSync(pagesDir))) {

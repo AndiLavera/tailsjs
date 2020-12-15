@@ -4,6 +4,7 @@ import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
+import { generateHTML } from "../utils/setHTMLRoutes.tsx";
 
 interface ManifestModule {
   path: string;
@@ -34,7 +35,10 @@ export class ModuleHandler {
     return this.config.appRoot;
   }
 
-  async init(options: Record<string, boolean> = { building: false }) {
+  async init(
+    options: Record<string, boolean> = { building: false },
+  ): Promise<void> {
+    // TODO: Make use of config.isBuilding
     if (this.config.mode === "production" && !options.building) {
       await this.loadManifest();
       this.setModules();
@@ -43,6 +47,7 @@ export class ModuleHandler {
 
     await this.compile();
     await this.setDefaultComponents();
+    await this.writeHTML();
   }
 
   get(key: string): string {
@@ -61,25 +66,16 @@ export class ModuleHandler {
    * Writes all files in `modules` to `${appRoot}/.tails/`
    */
   async writeAll(): Promise<void> {
-    for (const key of this.keys()) {
-      const module = this.get(key);
-      const path = `${this.appRoot}/.tails/src/${key}`;
-
-      this.manifest[key] = { path, module };
-      await ensureTextFile(path, module);
-    }
-
-    await ensureTextFile(
-      `${this.appRoot}/.tails/manifest.json`,
-      JSON.stringify(this.manifest),
-    );
+    await this.writeModules();
+    await this.writeManifest();
 
     if (this.config.mode === "production") {
+      // await this.writeHTML();
       // Copy files to /dist
     }
   }
 
-  async setDefaultComponents(): Promise<void> {
+  private async setDefaultComponents(): Promise<void> {
     this.appComponent = await this.loadAppComponent();
     this.documentComponent = await this.loadDocumentComponent();
     this.bootstrap = await this.loadBootstrap();
@@ -119,7 +115,8 @@ export class ModuleHandler {
     return decoder.decode(data);
   }
 
-  private async compile() {
+  private async compile(): Promise<void> {
+    console.log("compiling");
     await compileApplication(
       this,
       this.config,
@@ -144,5 +141,55 @@ export class ModuleHandler {
         const { module } = this.manifest[key];
         this.set(key, module);
       });
+  }
+
+  private async writeManifest() {
+    await ensureTextFile(
+      `${this.appRoot}/.tails/manifest.json`,
+      JSON.stringify(this.manifest),
+    );
+  }
+
+  private async writeModules() {
+    for (const key of this.keys()) {
+      await this.writeModule(key);
+    }
+  }
+
+  private async writeModule(key: string) {
+    const module = this.get(key);
+    const path = `${this.appRoot}/.tails/src${key}`;
+
+    this.manifest[key] = { path, module };
+    await ensureTextFile(path, module);
+  }
+
+  private async writeHTML() {
+    await console.log(
+      "Cannot generate html from compiled modules until imports are transformed",
+    );
+    // const manifestKeys = Object.keys(this.manifest);
+    // const App = this.appComponent;
+    // const Document = this.documentComponent;
+
+    // if (!App || !Document) {
+    //   // TODO: App should be defined
+    //   throw new Error();
+    // }
+
+    // for (const key of manifestKeys) {
+    //   if (key.includes("_app") || key.includes("_document")) continue;
+
+    //   const { path } = this.manifest[key];
+    //   const Component = (await import(path)).default;
+
+    //   const html = generateHTML(
+    //     App,
+    //     Document,
+    //     Component,
+    //   );
+
+    //   console.log(html);
+    // }
   }
 }

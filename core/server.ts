@@ -7,7 +7,7 @@ export async function start(
   port: number,
   mode: "test" | "development" | "production",
   reload = false,
-) {
+): Promise<void> {
   const application = new Application(appDir, mode, reload);
   await application.ready();
 
