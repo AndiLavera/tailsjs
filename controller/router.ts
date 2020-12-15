@@ -98,7 +98,7 @@ export abstract class Router {
       return;
     }
 
-    throw new Error("Must supply a module & method or page");
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
   }
 
   // head(
