@@ -95,6 +95,7 @@ export abstract class Router {
 
     if (page) {
       this._paths.get[path] = { page };
+      return;
     }
 
     throw new Error("Must supply a module & method or page");
