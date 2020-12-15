@@ -31,14 +31,11 @@ export class ModuleHandler {
 
   async init(options: Record<string, boolean> = { building: false }) {
     if (this.config.mode === "production" && !options.building) {
-      console.log("loading manifest");
       await this.loadManifest();
       this.setModules();
-      console.log(this.modules);
       return;
     }
 
-    console.log("compiling");
     await this.compile();
   }
 
@@ -74,9 +71,6 @@ export class ModuleHandler {
     if (this.config.mode === "production") {
       // Copy files to /dist
     }
-
-    console.log("MANIFEST");
-    console.log(this.manifest);
   }
 
   async loadAppComponent(): Promise<ComponentType<any>> {
@@ -103,21 +97,10 @@ export class ModuleHandler {
   }
 
   private async compile() {
-    const options = {
-      mode: this.config.mode,
-    };
-
     await compileApplication(
       this,
-      this.config.assetPath.bind(this.config),
-      this.config.assetDir,
-      this.config.appRoot,
-      options,
+      this.config,
     );
-
-    console.log("COMPILED MODULES:\n");
-    console.log(this.modules);
-    console.log("\n");
   }
 
   private async loadManifest(): Promise<void> {
@@ -136,7 +119,6 @@ export class ModuleHandler {
     Object.keys(this.manifest)
       .forEach((key) => {
         const { module } = this.manifest[key];
-        console.log(module);
         this.set(key, module);
       });
   }

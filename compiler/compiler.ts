@@ -3,6 +3,7 @@ import { Modules } from "../types.ts";
 import { ensureTextFile } from "../fs.ts";
 import { reModuleExt } from "../core/utils.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
+import { Configuration } from "../core/configuration.ts";
 
 async function compile(
   path: string,
@@ -19,7 +20,6 @@ async function compile(
   Object.keys(bundle)
     .forEach((moduleKey: string) => {
       const key = moduleKey.replace(`file://${assetDir}`, "");
-      // modules[key] = bundle[moduleKey];
       moduleHandler.set(key, bundle[moduleKey]);
     });
 }
@@ -45,20 +45,14 @@ async function bundle(
 
 /**
  * Walks the `pages` directory and compiles all files. `Deno.compile` will
- * compile all imports as well. These are injected into `modules`.
+ * compile all imports as well. These are injected into `moduleHandler.modules`.
  *
- * @param modules
- * @param assetPath
- * @param assetDir
- * @param appRoot
- * @param options
+ * @param moduleHandler
+ * @param config
  */
 export async function compileApplication(
   moduleHandler: ModuleHandler,
-  assetPath: (asset: string) => string,
-  assetDir: string,
-  appRoot: string,
-  options: Record<string, string> = {},
+  config: Configuration,
 ) {
   const walkOptions = {
     includeDirs: true,
@@ -66,7 +60,7 @@ export async function compileApplication(
     skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
   };
 
-  const { mode } = options;
+  const { mode, assetDir } = config;
 
   // TODO: Transpile conrollers for loading
   // const apiDir = assetPath("controllers");
@@ -74,7 +68,7 @@ export async function compileApplication(
   //   console.log();
   // }
 
-  const pagesDir = assetPath("pages");
+  const pagesDir = config.assetPath("pages");
   for await (const { path } of walk(pagesDir, walkOptions)) {
     if (mode === "production") {
       // await bundle(path, moduleHandler, assetDir);
@@ -85,7 +79,6 @@ export async function compileApplication(
   }
 
   await moduleHandler.writeAll();
-  // await writeFiles(moduleHandler, appRoot);
   if (mode === "production") {
     // TODO: Move files to dist folder
   }

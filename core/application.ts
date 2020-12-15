@@ -40,6 +40,11 @@ export class Application {
     return this.routeHandler.serverRouters;
   }
 
+  /**
+   * Handles loading configuration files, ensuring the users
+   * project is following our conventions, compiling the project
+   * & setting all the proper routes.
+   */
   async ready() {
     const startTime = performance.now();
 
@@ -53,10 +58,15 @@ export class Application {
     );
   }
 
+  /**
+   * Handles loading configuration files, ensuring the users
+   * project is following our conventions & compiling the project.
+   */
   async build() {
     const startTime = performance.now();
 
     await this.config.loadConfig({ building: true });
+    await this.init(this.reload);
     await this.moduleHandler.init({ building: true });
 
     log.info(
@@ -64,6 +74,11 @@ export class Application {
     );
   }
 
+  /**
+   * Handles loading configuration files, loading the users
+   * project from the compiled `manifest.json` & setting all
+   * the proper routes.
+   */
   async start() {
     const startTime = performance.now();
     await this.config.loadConfig();

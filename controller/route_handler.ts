@@ -9,14 +9,16 @@ import { ModuleHandler } from "../core/module_handler.ts";
 
 export class RouteHandler {
   router: Router;
-  serverRouters: ServerRouter[];
   // deno-lint-ignore no-explicit-any
   appComponent?: ComponentType<any>;
-  #config: Configuration;
   #bootstrap: string;
 
+  readonly serverRouters: ServerRouter[];
+
+  private readonly config: Configuration;
+
   constructor(config: Configuration) {
-    this.#config = config;
+    this.config = config;
     this.serverRouters = [];
     this.#bootstrap = "";
     this.router = new FakeRouter();
@@ -30,7 +32,7 @@ export class RouteHandler {
   }
 
   async prepareRouter(): Promise<void> {
-    const routesPath = path.join(this.#config.appRoot, "config/routes.ts");
+    const routesPath = path.join(this.config.appRoot, "config/routes.ts");
     const { default: routes } = await import("file://" + routesPath);
 
     const router = new routes();
@@ -62,9 +64,9 @@ export class RouteHandler {
     console.log("\n");
 
     router
-      .get(this.#config.mainJSPath, (context: Context) => {
+      .get(this.config.mainJSPath, (context: Context) => {
         context.response.type = "application/javascript";
-        context.response.body = this.#config.mainJS;
+        context.response.body = this.config.mainJS;
       })
       .get("/bootstrap.ts", (context: Context) => {
         context.response.type = "application/javascript";
@@ -124,7 +126,7 @@ export class RouteHandler {
             routes,
             router,
             "/main.js",
-            this.#config.assetPath.bind(this.#config),
+            this.config.assetPath.bind(this.config),
           );
         }
 
