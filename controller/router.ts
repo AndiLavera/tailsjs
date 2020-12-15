@@ -58,29 +58,43 @@ export abstract class Router {
     return controller;
   }
 
-  // connect(
-  //   path: string,
-  //   module: typeof Controller,
-  //   method: string,
-  // ): void {
-  //   this.paths[path] = {
-  //     module,
-  //     method,
-  //     httpMethod: "CONNECT",
-  //   };
-  // }
+  connect({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.connect[path] = { module, method };
+      return;
+    }
 
-  // delete(
-  //   path: string,
-  //   module: typeof Controller,
-  //   method: string,
-  // ): void {
-  //   this.paths[path] = {
-  //     module,
-  //     method,
-  //     httpMethod: "DELETE",
-  //   };
-  // }
+    if (page) {
+      this._paths.connect[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
+  }
+
+  delete({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.delete[path] = { module, method };
+      return;
+    }
+
+    if (page) {
+      this._paths.delete[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
+  }
 
   get({ path, module, page, method }: {
     path: string;
@@ -101,76 +115,117 @@ export abstract class Router {
     throw new Error(`Must supply a module & method or page for route: ${path}`);
   }
 
-  // head(
-  //   path: string,
-  //   module: typeof Controller,
-  //   method: string,
-  // ): void {
-  //   this.paths[path] = {
-  //     module,
-  //     method,
-  //     httpMethod: "HEAD",
-  //   };
-  // }
-
-  // options(
-  //   path: string,
-  //   module: typeof Controller,
-  //   method: string,
-  // ): void {
-  //   this.paths[path] = {
-  //     module,
-  //     method,
-  //     httpMethod: "OPTIONS",
-  //   };
-  // }
-
-  // patch(
-  //   path: string,
-  //   module: typeof Controller,
-  //   method: string,
-  // ): void {
-  //   this.paths[path] = {
-  //     module,
-  //     method,
-  //     httpMethod: "PATCH",
-  //   };
-  // }
-
-  post(
-    path: string,
-    module: new () => Controller,
-    method: string,
-  ): void {
-    if (this._paths.post) {
-      this._paths.post[path] = { module, method };
-    } else {
-      this._paths.post = {};
-      this._paths.post[path] = { module, method };
+  head({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.head[path] = { module, method };
+      return;
     }
+
+    if (page) {
+      this._paths.head[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
   }
 
-  // put(
-  //   path: string,
-  //   module: typeof Controller,
-  //   method: string,
-  // ): void {
-  //   this.paths[path] = {
-  //     module,
-  //     method,
-  //     httpMethod: "PUT",
-  //   };
-  // }
+  options({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.options[path] = { module, method };
+      return;
+    }
 
-  // trace(
-  //   path: string,
-  //   module: typeof Controller,
-  //   method: string,
-  // ): void {
-  //   this.paths[path] = {
-  //     module,
-  //     method,
-  //     httpMethod: "TRACE",
-  //   };
-  // }
+    if (page) {
+      this._paths.options[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
+  }
+
+  patch({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.patch[path] = { module, method };
+      return;
+    }
+
+    if (page) {
+      this._paths.patch[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
+  }
+
+  post({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.post[path] = { module, method };
+      return;
+    }
+
+    if (page) {
+      this._paths.post[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
+  }
+
+  put({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.put[path] = { module, method };
+      return;
+    }
+
+    if (page) {
+      this._paths.put[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
+  }
+
+  trace({ path, module, page, method }: {
+    path: string;
+    module?: new () => Controller;
+    page?: string;
+    method?: string;
+  }): void {
+    if (module && method) {
+      this._paths.trace[path] = { module, method };
+      return;
+    }
+
+    if (page) {
+      this._paths.trace[path] = { page };
+      return;
+    }
+
+    throw new Error(`Must supply a module & method or page for route: ${path}`);
+  }
 }
