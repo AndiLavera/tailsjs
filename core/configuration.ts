@@ -95,6 +95,52 @@ export class Configuration {
     return (this.mode === "development" || !this.isBuilding);
   }
 
+  /**
+   * Main bundle all pages should fetch
+   * Should pass routes to bootstrap but hard coded for now
+   */
+  get mainJS(): string {
+    // TODO: Just move bootstrap code here
+    return `
+      import { bootstrap } from "./bootstrap.ts";
+      bootstrap()
+      `;
+  }
+
+  get buildDir() {
+    return path.join(
+      this.appRoot,
+      ".tails",
+      this.mode + "." + this.buildTarget,
+    );
+  }
+
+  /**
+   * Returns the path that should be used
+   * when fetch assets.
+   */
+  get assetDir(): string {
+    if (this.isDev) {
+      return `${this.appRoot}/src`;
+    }
+
+    // TODO: production should be:
+    // `${this.appRoot}${this.outputDir}/src
+    return `${this.appRoot}/src`;
+  }
+
+  /**
+   * Handles returning the full path of an asset
+   * based on the current environment mode.
+   *
+   * @param asset - The asset to be fetched
+   * Ex: `pages/_app.tsx` or `components/logo.tsx`
+   */
+  assetPath(asset: string): string {
+    const assetDir = this.assetDir;
+    return `${assetDir}/${asset}`;
+  }
+
   async loadConfig(
     options: Record<string, boolean> = { building: false },
   ) {

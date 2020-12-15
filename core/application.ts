@@ -3,8 +3,7 @@ import log from "../logger/logger.ts";
 import { ensureDir, path } from "../std.ts";
 import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
-import { AssetHandler } from "./asset_handler.ts";
-import { Modules } from "../types.ts";
+import { RouteHandler } from "../controller/route_handler.ts";
 import { compileApplication } from "../compiler/compiler.ts";
 import { ModuleHandler } from "./module_handler.ts";
 
@@ -12,7 +11,7 @@ export class Application {
   readonly config: Configuration;
   readonly appRoot: string;
   readonly moduleHandler: ModuleHandler;
-  private readonly assetHandler: AssetHandler;
+  private readonly routeHandler: RouteHandler;
   private readonly mode: "test" | "development" | "production";
   private readonly reload: boolean;
 
@@ -25,13 +24,9 @@ export class Application {
     this.mode = mode;
     this.reload = reload;
     this.config = new Configuration(appDir, mode);
-    this.assetHandler = new AssetHandler(this.config);
-    this.moduleHandler = new ModuleHandler(this.assetHandler, mode);
+    this.routeHandler = new RouteHandler(this.config);
+    this.moduleHandler = new ModuleHandler(this.config);
   }
-
-  // get isDev() {
-  //   return this.mode === "development";
-  // }
 
   get buildDir() {
     return path.join(
@@ -42,7 +37,7 @@ export class Application {
   }
 
   get routers() {
-    return this.assetHandler.serverRouters;
+    return this.routeHandler.serverRouters;
   }
 
   async ready() {
@@ -51,7 +46,7 @@ export class Application {
     await this.config.loadConfig();
     await this.init(this.reload);
     await this.moduleHandler.init();
-    await this.assetHandler.init(this.moduleHandler);
+    await this.routeHandler.init(this.moduleHandler);
 
     log.info(
       "Project loaded in " + Math.round(performance.now() - startTime) + "ms",
@@ -73,7 +68,7 @@ export class Application {
     const startTime = performance.now();
     await this.config.loadConfig();
     await this.moduleHandler.init();
-    await this.assetHandler.init(this.moduleHandler);
+    await this.routeHandler.init(this.moduleHandler);
 
     log.info(
       "Project started in " + Math.round(performance.now() - startTime) + "ms",

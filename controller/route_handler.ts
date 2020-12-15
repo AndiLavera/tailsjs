@@ -1,13 +1,13 @@
 import FakeRouter from "../controller/fake_router.ts";
 import { Router } from "../controller/router.ts";
 import { ComponentType, Context, Router as ServerRouter } from "../deps.ts";
-import { Configuration } from "./configuration.ts";
+import { Configuration } from "../core/configuration.ts";
 import { path, walk } from "../std.ts";
 import { Middleware, Modules, Paths, Route } from "../types.ts";
 import { generateHTMLRoutes } from "../utils/generate_html_routes.tsx";
-import { ModuleHandler } from "./module_handler.ts";
+import { ModuleHandler } from "../core/module_handler.ts";
 
-export class AssetHandler {
+export class RouteHandler {
   router: Router;
   serverRouters: ServerRouter[];
   // deno-lint-ignore no-explicit-any
@@ -20,56 +20,6 @@ export class AssetHandler {
     this.serverRouters = [];
     this.#bootstrap = "";
     this.router = new FakeRouter();
-  }
-
-  /**
-   * Main bundle all pages should fetch
-   * Should pass routes to bootstrap but hard coded for now
-   */
-  get mainJS(): string {
-    // TODO: Just move bootstrap code here
-    return `
-      import { bootstrap } from "./bootstrap.ts";
-      bootstrap()
-      `;
-  }
-
-  get buildDir() {
-    return path.join(
-      this.#config.appRoot,
-      ".tails",
-      this.#config.mode + "." + this.#config.buildTarget,
-    );
-  }
-
-  /**
-   * Returns the path that should be used
-   * when fetch assets.
-   */
-  get assetDir(): string {
-    if (this.#config.isDev) {
-      return `${this.#config.appRoot}/src`;
-    }
-
-    // TODO: production should be:
-    // `${this.#config.appRoot}${this.#config.outputDir}/src
-    return `${this.#config.appRoot}/src`;
-  }
-
-  get appRoot(): string {
-    return this.#config.appRoot;
-  }
-
-  /**
-   * Handles returning the full path of an asset
-   * based on the current environment mode.
-   *
-   * @param asset - The asset to be fetched
-   * Ex: `pages/_app.tsx` or `components/logo.tsx`
-   */
-  assetPath(asset: string): string {
-    const assetDir = this.assetDir;
-    return `${assetDir}/${asset}`;
   }
 
   async init(moduleHandler: ModuleHandler): Promise<void> {
@@ -114,7 +64,7 @@ export class AssetHandler {
     router
       .get(this.#config.mainJSPath, (context: Context) => {
         context.response.type = "application/javascript";
-        context.response.body = this.mainJS;
+        context.response.body = this.#config.mainJS;
       })
       .get("/bootstrap.ts", (context: Context) => {
         context.response.type = "application/javascript";
@@ -174,7 +124,7 @@ export class AssetHandler {
             routes,
             router,
             "/main.js",
-            this.assetPath.bind(this),
+            this.#config.assetPath.bind(this.#config),
           );
         }
 

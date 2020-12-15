@@ -3,7 +3,6 @@ import { ComponentType } from "../deps.ts";
 import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { Modules } from "../types.ts";
-import { AssetHandler } from "./asset_handler.ts";
 import { Configuration } from "./configuration.ts";
 
 interface ManifestModule {
@@ -18,25 +17,20 @@ interface Manifest {
 export class ModuleHandler {
   readonly modules: Modules;
   private manifest: Manifest;
-  private readonly assetHandler: AssetHandler;
-  private readonly mode: "test" | "development" | "production";
+  private readonly config: Configuration;
 
-  constructor(
-    assetHandler: AssetHandler,
-    mode: "test" | "development" | "production",
-  ) {
-    this.assetHandler = assetHandler;
-    this.mode = mode;
+  constructor(config: Configuration) {
+    this.config = config;
     this.modules = {};
     this.manifest = {};
   }
 
   get appRoot(): string {
-    return this.assetHandler.appRoot;
+    return this.config.appRoot;
   }
 
   async init(options: Record<string, boolean> = { building: false }) {
-    if (this.mode === "production" && !options.building) {
+    if (this.config.mode === "production" && !options.building) {
       console.log("loading manifest");
       await this.loadManifest();
       this.setModules();
@@ -77,7 +71,7 @@ export class ModuleHandler {
       JSON.stringify(this.manifest),
     );
 
-    if (this.mode === "production") {
+    if (this.config.mode === "production") {
       // Copy files to /dist
     }
 
@@ -92,7 +86,7 @@ export class ModuleHandler {
 
       return appComponent;
     } catch {
-      throw new Error("Cannot find pages/_app.tsx");
+      throw new Error(`Cannot find pages/_app.tsx. Path tried: ${path}`);
     }
   }
 
@@ -110,14 +104,14 @@ export class ModuleHandler {
 
   private async compile() {
     const options = {
-      mode: this.mode,
+      mode: this.config.mode,
     };
 
     await compileApplication(
       this,
-      this.assetHandler.assetPath.bind(this.assetHandler),
-      this.assetHandler.assetDir,
-      this.assetHandler.appRoot,
+      this.config.assetPath.bind(this.config),
+      this.config.assetDir,
+      this.config.appRoot,
       options,
     );
 
@@ -129,15 +123,21 @@ export class ModuleHandler {
   private async loadManifest(): Promise<void> {
     const path = `${this.appRoot}/.tails/manifest.json`;
     const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(path);
 
-    this.manifest = JSON.parse(decoder.decode(data));
+    try {
+      const data = await Deno.readFile(path);
+      this.manifest = JSON.parse(decoder.decode(data));
+    } catch {
+      throw new Error(`Cannot load manifest. Path tried: ${path}`);
+    }
   }
 
   private setModules(): void {
     Object.keys(this.manifest)
       .forEach((key) => {
-        this.modules[key] = this.manifest[key].module;
+        const { module } = this.manifest[key];
+        console.log(module);
+        this.set(key, module);
       });
   }
 }
