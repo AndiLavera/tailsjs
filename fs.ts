@@ -72,5 +72,5 @@ export function existsFileSync(path: string) {
 export async function ensureTextFile(name: string, content: string) {
   const dir = path.dirname(name);
   await ensureDir(dir);
-  await Deno.writeTextFile(name, content);
+  return await Deno.writeTextFile(name, content);
 }

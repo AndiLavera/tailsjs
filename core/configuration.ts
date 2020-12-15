@@ -41,6 +41,8 @@ export class Configuration {
 
   mainJSPath: string;
 
+  isBuilding: boolean;
+
   readonly appRoot: string;
   readonly mode: "test" | "development" | "production";
 
@@ -68,6 +70,7 @@ export class Configuration {
     this.locales = [];
     this.buildTarget = mode === "development" ? "es2018" : "es2015";
     this.sourceMap = false;
+    this.isBuilding = false;
     this.reactUrl = "https://esm.sh/react@17.0.1";
     this.reactDomUrl = "https://esm.sh/react-dom@17.0.1";
     this.plugins = [];
@@ -89,10 +92,13 @@ export class Configuration {
   }
 
   get isDev() {
-    return this.mode === "development";
+    return (this.mode === "development" || !this.isBuilding);
   }
 
-  async loadConfig() {
+  async loadConfig(
+    options: Record<string, boolean> = { building: false },
+  ) {
+    this.isBuilding = options.building;
     const config: Record<string, any> = {};
     await this.loadImportMap();
     await this.loadConfigFiles(config);

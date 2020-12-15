@@ -1,10 +1,11 @@
 import FakeRouter from "../controller/fake_router.ts";
-import { Router } from "./router.ts";
+import { Router } from "../controller/router.ts";
 import { ComponentType, Context, Router as ServerRouter } from "../deps.ts";
-import { Configuration } from "../core/configuration.ts";
+import { Configuration } from "./configuration.ts";
 import { path, walk } from "../std.ts";
 import { Middleware, Modules, Paths, Route } from "../types.ts";
 import { generateHTMLRoutes } from "../utils/generate_html_routes.tsx";
+import { ModuleHandler } from "./module_handler.ts";
 
 export class AssetHandler {
   router: Router;
@@ -55,6 +56,10 @@ export class AssetHandler {
     return `${this.#config.appRoot}/src`;
   }
 
+  get appRoot(): string {
+    return this.#config.appRoot;
+  }
+
   /**
    * Handles returning the full path of an asset
    * based on the current environment mode.
@@ -67,12 +72,11 @@ export class AssetHandler {
     return `${assetDir}/${asset}`;
   }
 
-  async init(modules: Modules): Promise<void> {
-    this.#bootstrap = await this.loadBootstrap();
-    this.appComponent = await this.loadAppComponent();
-    // TODO: Should server call this so build doesn't?
+  async init(moduleHandler: ModuleHandler): Promise<void> {
+    this.#bootstrap = await moduleHandler.loadBootstrap();
+    this.appComponent = await moduleHandler.loadAppComponent();
     await this.loadUserRoutes();
-    this.generateJSRoutes(modules);
+    this.generateJSRoutes(moduleHandler.modules);
   }
 
   async prepareRouter(): Promise<void> {
@@ -201,29 +205,6 @@ export class AssetHandler {
         const routes = paths[httpMethod];
         this.setRoute(routes, router, httpMethod, pipeline, App);
       });
-  }
-
-  private async loadAppComponent(): Promise<ComponentType<any>> {
-    try {
-      const { default: appComponent } = await import(
-        this.assetPath("pages/_app.tsx")
-      );
-      return appComponent;
-    } catch {
-      // TODO: Can't load app error
-      throw new Error("Cannot find pages/_app.tsx");
-    }
-  }
-
-  /**
-   * Load boostrap file
-   */
-  private async loadBootstrap(): Promise<string> {
-    const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(
-      path.resolve("./") + "/browser/bootstrap.js",
-    );
-    return decoder.decode(data);
   }
 
   private generateAPIRoutes(

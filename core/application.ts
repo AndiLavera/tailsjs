@@ -3,14 +3,15 @@ import log from "../logger/logger.ts";
 import { ensureDir, path } from "../std.ts";
 import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
-import { AssetHandler } from "../controller/asset_handler.ts";
+import { AssetHandler } from "./asset_handler.ts";
 import { Modules } from "../types.ts";
 import { compileApplication } from "../compiler/compiler.ts";
+import { ModuleHandler } from "./module_handler.ts";
 
 export class Application {
   readonly config: Configuration;
   readonly appRoot: string;
-  private readonly modules: Modules;
+  readonly moduleHandler: ModuleHandler;
   private readonly assetHandler: AssetHandler;
   private readonly mode: "test" | "development" | "production";
   private readonly reload: boolean;
@@ -23,9 +24,9 @@ export class Application {
     this.appRoot = path.resolve(appDir);
     this.mode = mode;
     this.reload = reload;
-    this.modules = {};
     this.config = new Configuration(appDir, mode);
     this.assetHandler = new AssetHandler(this.config);
+    this.moduleHandler = new ModuleHandler(this.assetHandler, mode);
   }
 
   // get isDev() {
@@ -49,8 +50,8 @@ export class Application {
 
     await this.config.loadConfig();
     await this.init(this.reload);
-    await this.compile();
-    await this.assetHandler.init(this.modules);
+    await this.moduleHandler.init();
+    await this.assetHandler.init(this.moduleHandler);
 
     log.info(
       "Project loaded in " + Math.round(performance.now() - startTime) + "ms",
@@ -60,8 +61,8 @@ export class Application {
   async build() {
     const startTime = performance.now();
 
-    await this.config.loadConfig();
-    await this.compile();
+    await this.config.loadConfig({ building: true });
+    await this.moduleHandler.init({ building: true });
 
     log.info(
       "Project built in " + Math.round(performance.now() - startTime) + "ms",
@@ -71,12 +72,8 @@ export class Application {
   async start() {
     const startTime = performance.now();
     await this.config.loadConfig();
-    // TODO: Load manifest
-    await this.assetHandler.init(this.modules);
-
-    if (this.config.isDev) {
-      // this._watch();
-    }
+    await this.moduleHandler.init();
+    await this.assetHandler.init(this.moduleHandler);
 
     log.info(
       "Project started in " + Math.round(performance.now() - startTime) + "ms",
@@ -97,18 +94,9 @@ export class Application {
 
       await ensureDir(this.buildDir);
     }
-  }
 
-  private async compile() {
-    await compileApplication(
-      this.modules,
-      this.assetHandler.assetPath.bind(this.assetHandler),
-      this.assetHandler.assetDir,
-      this.appRoot,
-    );
-
-    console.log("COMPILED MODULES:\n");
-    console.log(this.modules);
-    console.log("\n");
+    if (this.config.isDev) {
+      // this._watch();
+    }
   }
 }
