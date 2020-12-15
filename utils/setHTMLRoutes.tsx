@@ -12,8 +12,9 @@ async function importComponent(path: string) {
   return (await import(path)).default;
 }
 
-export async function generateHTMLRoutes(
+export async function setHTMLRoutes(
   App: ComponentType<any>,
+  Document: ComponentType<any>,
   routes: Record<string, Route>,
   router: Router,
   mainJSPath: string,
@@ -29,17 +30,11 @@ export async function generateHTMLRoutes(
 
     router.get(route, (context: Context) => {
       context.response.type = "text/html";
-      context.response.body = `<html>
-      <head>
-        <link rel="stylesheet" href="https://unpkg.com/purecss@2.0.3/build/pure-min.css">
-      </head>
-      <body>
-        <main id="app">${
-        renderToString(<App Page={Component} pageProps={{}} />)
-      }</main>
-        <script type="module" src="${mainJSPath}"></script>
-      </body>
-    </html>`;
+      context.response.body = renderToString(
+        <Document>
+          <App Page={Component} pageProps={{}} />
+        </Document>,
+      );
     });
   });
 

@@ -57,6 +57,7 @@ export class Configuration {
   constructor(
     appDir: string,
     mode: "test" | "development" | "production",
+    building: boolean = false,
   ) {
     this.appRoot = path.resolve(appDir);
     this.mode = mode;
@@ -70,7 +71,7 @@ export class Configuration {
     this.locales = [];
     this.buildTarget = mode === "development" ? "es2018" : "es2015";
     this.sourceMap = false;
-    this.isBuilding = false;
+    this.isBuilding = building;
     this.reactUrl = "https://esm.sh/react@17.0.1";
     this.reactDomUrl = "https://esm.sh/react-dom@17.0.1";
     this.plugins = [];
@@ -120,13 +121,13 @@ export class Configuration {
    * when fetch assets.
    */
   get assetDir(): string {
-    if (this.isDev) {
-      return `${this.appRoot}/src`;
+    if (this.isDev || this.isBuilding) {
+      return path.join(this.appRoot, "src");
     }
 
     // TODO: production should be:
     // `${this.appRoot}${this.outputDir}/src
-    return `${this.appRoot}/src`;
+    return path.join(this.appRoot, ".tails", "src");
   }
 
   /**
@@ -137,14 +138,10 @@ export class Configuration {
    * Ex: `pages/_app.tsx` or `components/logo.tsx`
    */
   assetPath(asset: string): string {
-    const assetDir = this.assetDir;
-    return `${assetDir}/${asset}`;
+    return path.join(this.assetDir, asset);
   }
 
-  async loadConfig(
-    options: Record<string, boolean> = { building: false },
-  ) {
-    this.isBuilding = options.building;
+  async loadConfig() {
     const config: Record<string, any> = {};
     await this.loadImportMap();
     await this.loadConfigFiles(config);

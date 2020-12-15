@@ -15,6 +15,10 @@ interface Manifest {
 }
 
 export class ModuleHandler {
+  bootstrap: string;
+  appComponent?: ComponentType<any>;
+  documentComponent?: ComponentType<any>;
+
   readonly modules: Modules;
   private manifest: Manifest;
   private readonly config: Configuration;
@@ -23,6 +27,7 @@ export class ModuleHandler {
     this.config = config;
     this.modules = {};
     this.manifest = {};
+    this.bootstrap = 'throw new Error("No Bootstrap Content")';
   }
 
   get appRoot(): string {
@@ -37,6 +42,7 @@ export class ModuleHandler {
     }
 
     await this.compile();
+    await this.setDefaultComponents();
   }
 
   get(key: string): string {
@@ -73,7 +79,13 @@ export class ModuleHandler {
     }
   }
 
-  async loadAppComponent(): Promise<ComponentType<any>> {
+  async setDefaultComponents(): Promise<void> {
+    this.appComponent = await this.loadAppComponent();
+    this.documentComponent = await this.loadDocumentComponent();
+    this.bootstrap = await this.loadBootstrap();
+  }
+
+  private async loadAppComponent(): Promise<ComponentType<any>> {
     try {
       const path = this.manifest["/pages/_app.tsx.js"].path;
       const { default: appComponent } = await import(path);
@@ -84,10 +96,21 @@ export class ModuleHandler {
     }
   }
 
+  private async loadDocumentComponent(): Promise<ComponentType<any>> {
+    try {
+      const path = this.manifest["/pages/_document.tsx.js"].path;
+      const { default: documentComponent } = await import(path);
+
+      return documentComponent;
+    } catch {
+      throw new Error(`Cannot find pages/_document.tsx. Path tried: ${path}`);
+    }
+  }
+
   /**
    * Load boostrap file
    */
-  async loadBootstrap(): Promise<string> {
+  private async loadBootstrap(): Promise<string> {
     const decoder = new TextDecoder("utf-8");
     const data = await Deno.readFile(
       path.resolve("./") + "/browser/bootstrap.js",

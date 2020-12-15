@@ -4,13 +4,14 @@ import { ComponentType, Context, Router as ServerRouter } from "../deps.ts";
 import { Configuration } from "../core/configuration.ts";
 import { path, walk } from "../std.ts";
 import { Middleware, Modules, Paths, Route } from "../types.ts";
-import { generateHTMLRoutes } from "../utils/generate_html_routes.tsx";
+import { setHTMLRoutes } from "../utils/setHTMLRoutes.tsx";
 import { ModuleHandler } from "../core/module_handler.ts";
 
 export class RouteHandler {
   router: Router;
   // deno-lint-ignore no-explicit-any
   appComponent?: ComponentType<any>;
+  documentComponent?: ComponentType<any>;
   #bootstrap: string;
 
   readonly serverRouters: ServerRouter[];
@@ -25,10 +26,11 @@ export class RouteHandler {
   }
 
   async init(moduleHandler: ModuleHandler): Promise<void> {
-    this.#bootstrap = await moduleHandler.loadBootstrap();
-    this.appComponent = await moduleHandler.loadAppComponent();
-    await this.loadUserRoutes();
-    this.generateJSRoutes(moduleHandler.modules);
+    this.#bootstrap = moduleHandler.bootstrap;
+    this.appComponent = moduleHandler.appComponent;
+    this.documentComponent = moduleHandler.documentComponent;
+    await this.setUserRoutes();
+    this.setJSRoutes(moduleHandler.modules);
   }
 
   async prepareRouter(): Promise<void> {
@@ -40,7 +42,7 @@ export class RouteHandler {
     this.router = router;
   }
 
-  generateJSRoutes(modules: Modules): void {
+  setJSRoutes(modules: Modules): void {
     const router = new ServerRouter();
 
     console.log("JS ASSET ROUTES:\n");
@@ -76,7 +78,7 @@ export class RouteHandler {
     this.serverRouters.push(router);
   }
 
-  private async loadUserRoutes(): Promise<void> {
+  private async setUserRoutes(): Promise<void> {
     await this.prepareRouter();
     const pipelines = this.router._pipelines;
 
@@ -117,12 +119,15 @@ export class RouteHandler {
     pipeline: string,
     // deno-lint-ignore no-explicit-any
     App: ComponentType<any>,
+    // deno-lint-ignore no-explicit-any
+    Document: ComponentType<any>,
   ): void {
     switch (httpMethod) {
       case "get":
         if (pipeline === "web") {
-          generateHTMLRoutes(
+          setHTMLRoutes(
             App,
+            Document,
             routes,
             router,
             "/main.js",
@@ -131,7 +136,7 @@ export class RouteHandler {
         }
 
         if (pipeline === "api") {
-          this.generateAPIRoutes(
+          this.setAPIRoutes(
             routes,
             router,
           );
@@ -147,7 +152,8 @@ export class RouteHandler {
     pipeline: string,
   ): void {
     const App = this.appComponent;
-    if (!App) {
+    const Document = this.documentComponent;
+    if (!App || !Document) {
       // TODO: App should be defined
       throw new Error();
     }
@@ -155,11 +161,11 @@ export class RouteHandler {
     Object.keys(paths)
       .forEach((httpMethod) => {
         const routes = paths[httpMethod];
-        this.setRoute(routes, router, httpMethod, pipeline, App);
+        this.setRoute(routes, router, httpMethod, pipeline, App, Document);
       });
   }
 
-  private generateAPIRoutes(
+  private setAPIRoutes(
     routes: Record<string, Route>,
     router: ServerRouter,
   ): void {

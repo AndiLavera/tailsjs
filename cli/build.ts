@@ -20,6 +20,7 @@ export default async function (
     appDir,
     "production",
     Boolean(options.r || options.reload),
+    true, // building
   );
   await app.build();
   Deno.exit(0);

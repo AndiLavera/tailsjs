@@ -19,11 +19,12 @@ export class Application {
     appDir: string,
     mode: "test" | "development" | "production",
     reload = false,
+    building = false,
   ) {
     this.appRoot = path.resolve(appDir);
     this.mode = mode;
     this.reload = reload;
-    this.config = new Configuration(appDir, mode);
+    this.config = new Configuration(appDir, mode, building);
     this.routeHandler = new RouteHandler(this.config);
     this.moduleHandler = new ModuleHandler(this.config);
   }
@@ -65,7 +66,7 @@ export class Application {
   async build() {
     const startTime = performance.now();
 
-    await this.config.loadConfig({ building: true });
+    await this.config.loadConfig();
     await this.init(this.reload);
     await this.moduleHandler.init({ building: true });
 
