@@ -5,6 +5,7 @@ export interface Route {
   module?: new () => Controller;
   method?: string;
   page?: string;
+  ssg?: boolean;
 }
 
 export interface Paths {
@@ -33,7 +34,10 @@ export interface Routes {
 
 // TODO: any
 export interface Modules {
-  [key: string]: any;
+  [key: string]: {
+    module: string;
+    html?: string;
+  };
 }
 
 /**

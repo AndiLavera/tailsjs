@@ -1,6 +1,7 @@
 import Controller from "./controller.ts";
 import { pathsFactory } from "./utils.ts";
 import { Middleware, Paths, Routes } from "../types.ts";
+import { path } from "../std.ts";
 
 export abstract class Router {
   _pipelines: Routes;
@@ -22,6 +23,22 @@ export abstract class Router {
     };
     this._paths = pathsFactory();
     this._instantiatedControllers = {};
+  }
+
+  /**
+   * Iterates over all routes in pipeline `web`. Returns an
+   * Array of strings that contain the pages that are SSG.
+   */
+  get _allStaticRoutes(): string[] {
+    const routes = [];
+    const webRoutes = this._pipelines.web.paths.get;
+    for (const [_, route] of Object.entries(webRoutes)) {
+      if (route.ssg && route.page) {
+        routes.push(path.join("pages", route.page));
+      }
+    }
+
+    return routes;
   }
 
   pipeline(pipe: string, callback: () => Middleware): void {
@@ -96,19 +113,22 @@ export abstract class Router {
     throw new Error(`Must supply a module & method or page for route: ${path}`);
   }
 
-  get({ path, module, page, method }: {
+  get({ path, module, page, method, ssg }: {
     path: string;
     module?: new () => Controller;
     page?: string;
     method?: string;
+    ssg?: boolean;
   }): void {
     if (module && method) {
-      this._paths.get[path] = { module, method };
+      this._paths.get[path] = { module, method, ssg: false };
       return;
     }
 
     if (page) {
-      this._paths.get[path] = { page };
+      const route = { page, ssg: false };
+      if (ssg || ssg === undefined) route.ssg = true;
+      this._paths.get[path] = route;
       return;
     }
 

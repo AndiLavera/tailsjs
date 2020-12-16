@@ -1,14 +1,26 @@
-import { walk } from "../std.ts";
+import { path, walk } from "../std.ts";
 import { Modules } from "../types.ts";
 import { ensureTextFile } from "../fs.ts";
 import { reModuleExt } from "../core/utils.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Configuration } from "../core/configuration.ts";
+import { generateHTML } from "../utils/setHTMLRoutes.tsx";
+import { ComponentType } from "../deps.ts";
 
+/**
+ * Compiles the path passed in. Raises and error if any compilation errors occur.
+ * Will genenerate HTML for each SSG page.
+ *
+ * @param path
+ * @param moduleHandler
+ * @param assetDir
+ * @param callback
+ */
 async function compile(
   path: string,
   moduleHandler: ModuleHandler,
   assetDir: string,
+  callback: (path: string) => Promise<string | undefined>,
 ): Promise<void> {
   const [diagnostics, bundle] = await Deno.compile(path);
 
@@ -17,16 +29,21 @@ async function compile(
     throw new Error(`Could not compile ${path}`);
   }
 
-  Object.keys(bundle)
-    .forEach((moduleKey: string) => {
-      const key = moduleKey.replace(`file://${assetDir}`, "");
-      moduleHandler.set(key, bundle[moduleKey]);
-    });
+  for await (const moduleKey of Object.keys(bundle)) {
+    const key = moduleKey.replace(`file://${assetDir}`, "");
+    let html;
+
+    if (moduleKey.includes(path) && !moduleKey.includes(".map")) {
+      html = await callback(path);
+    }
+
+    moduleHandler.set(key, bundle[moduleKey], html);
+  }
 }
 
 async function bundle(
   path: string,
-  moduleHandler: Modules,
+  moduleHandler: ModuleHandler,
   assetDir: string,
 ): Promise<void> {
   const [diagnostics, bundle] = await Deno.bundle(path);
@@ -53,6 +70,7 @@ async function bundle(
 export async function compileApplication(
   moduleHandler: ModuleHandler,
   config: Configuration,
+  staticRoutes: string[],
 ) {
   const walkOptions = {
     includeDirs: true,
@@ -61,6 +79,14 @@ export async function compileApplication(
   };
 
   const { mode, assetDir } = config;
+  const pagesDir = config.assetPath("pages");
+  const { default: App } = await import(
+    path.join(pagesDir, "_app.tsx")
+  );
+
+  const { default: Document } = await import(
+    path.join(pagesDir, "_document.tsx")
+  );
 
   // TODO: Transpile conrollers for loading
   // const apiDir = assetPath("controllers");
@@ -68,18 +94,42 @@ export async function compileApplication(
   //   console.log();
   // }
 
-  const pagesDir = config.assetPath("pages");
+  /**
+   * Callback invoked during compliation. Handles rendering ssg routes and returning
+   * the html.
+   *
+   * @param path
+   */
+  const callback = async (path: string): Promise<string | undefined> => {
+    if (path.includes("_app") || path.includes("_document")) return;
+
+    const hasStaticRoute = staticRoutes.filter((route) => path.includes(route));
+    if (hasStaticRoute.length === 0) return;
+
+    return await render(path, App, Document);
+  };
+
   for await (const { path } of walk(pagesDir, walkOptions)) {
     if (mode === "production") {
       // await bundle(path, moduleHandler, assetDir);
-      await compile(path, moduleHandler, assetDir);
+      await compile(path, moduleHandler, assetDir, callback);
     } else {
-      await compile(path, moduleHandler, assetDir);
+      await compile(path, moduleHandler, assetDir, callback);
     }
   }
+}
 
-  await moduleHandler.writeAll();
-  if (mode === "production") {
-    // TODO: Move files to dist folder
-  }
+async function render(
+  path: string,
+  App: ComponentType<any>,
+  Document: ComponentType<any>,
+): Promise<string | undefined> {
+  console.log(path);
+  const { default: Component } = await import(path);
+
+  return generateHTML(
+    App,
+    Document,
+    Component,
+  );
 }

@@ -9,28 +9,34 @@ import { ModuleHandler } from "../core/module_handler.ts";
 
 export class RouteHandler {
   router: Router;
-  // deno-lint-ignore no-explicit-any
-  appComponent?: ComponentType<any>;
-  documentComponent?: ComponentType<any>;
   #bootstrap: string;
 
   readonly serverRouters: ServerRouter[];
 
   private readonly config: Configuration;
+  #moduleHandler: ModuleHandler;
 
-  constructor(config: Configuration) {
+  constructor(config: Configuration, moduleHandler: ModuleHandler) {
     this.config = config;
     this.serverRouters = [];
     this.#bootstrap = "";
     this.router = new FakeRouter();
+    this.#moduleHandler = moduleHandler;
   }
 
-  async init(moduleHandler: ModuleHandler): Promise<void> {
-    this.#bootstrap = moduleHandler.bootstrap;
-    this.appComponent = moduleHandler.appComponent;
-    this.documentComponent = moduleHandler.documentComponent;
+  get _allStaticRoutes(): string[] {
+    return this.router._allStaticRoutes;
+  }
+
+  async init(): Promise<void> {
+    await this.prepareRouter();
+  }
+
+  async build(): Promise<void> {
+    this.#bootstrap = this.#moduleHandler.bootstrap;
+
     await this.setUserRoutes();
-    this.setJSRoutes(moduleHandler.modules);
+    this.setJSRoutes();
   }
 
   async prepareRouter(): Promise<void> {
@@ -42,12 +48,13 @@ export class RouteHandler {
     this.router = router;
   }
 
-  setJSRoutes(modules: Modules): void {
+  setJSRoutes(): void {
+    const { modules } = this.#moduleHandler;
     const router = new ServerRouter();
 
     console.log("JS ASSET ROUTES:\n");
     Object.keys(modules).forEach((key) => {
-      const file = modules[key];
+      const file = modules[key].module;
       const path = key
         .replace(".js", "")
         .replace("/pages", "");
@@ -79,7 +86,6 @@ export class RouteHandler {
   }
 
   private async setUserRoutes(): Promise<void> {
-    await this.prepareRouter();
     const pipelines = this.router._pipelines;
 
     for await (const key of Object.keys(pipelines)) {
@@ -117,17 +123,12 @@ export class RouteHandler {
     router: ServerRouter,
     httpMethod: string,
     pipeline: string,
-    // deno-lint-ignore no-explicit-any
-    App: ComponentType<any>,
-    // deno-lint-ignore no-explicit-any
-    Document: ComponentType<any>,
   ): void {
     switch (httpMethod) {
       case "get":
         if (pipeline === "web") {
           setHTMLRoutes(
-            App,
-            Document,
+            this.#moduleHandler,
             routes,
             router,
             this.config.assetPath.bind(this.config),
@@ -150,17 +151,10 @@ export class RouteHandler {
     router: ServerRouter,
     pipeline: string,
   ): void {
-    const App = this.appComponent;
-    const Document = this.documentComponent;
-    if (!App || !Document) {
-      // TODO: App should be defined
-      throw new Error();
-    }
-
     Object.keys(paths)
       .forEach((httpMethod) => {
         const routes = paths[httpMethod];
-        this.setRoute(routes, router, httpMethod, pipeline, App, Document);
+        this.setRoute(routes, router, httpMethod, pipeline);
       });
   }
 
@@ -170,12 +164,15 @@ export class RouteHandler {
   ): void {
     Object.keys(routes)
       .forEach((path) => {
-        const route = routes[path];
-        if (route.module) {
-          const controller = this.router._fetchController(route.module);
-          const method = route.method || "";
-          router.get(`/api${path}`, controller[method]);
-        }
+        this.setAPIRoute(path, routes[path], router);
       });
+  }
+
+  private setAPIRoute(path: string, route: Route, router: ServerRouter) {
+    if (route.module) {
+      const controller = this.router._fetchController(route.module);
+      const method = route.method || "";
+      router.get(`/api${path}`, controller[method]);
+    }
   }
 }

@@ -9,6 +9,7 @@ import { generateHTML } from "../utils/setHTMLRoutes.tsx";
 interface ManifestModule {
   path: string;
   module: string;
+  html?: string;
 }
 
 interface Manifest {
@@ -44,18 +45,25 @@ export class ModuleHandler {
       this.setModules();
       return;
     }
-
-    await this.compile();
-    await this.setDefaultComponents();
-    await this.writeHTML();
   }
 
-  get(key: string): string {
+  async build(staticRoutes: string[]) {
+    await this.compile(staticRoutes);
+    await this.writeAll();
+
+    await this.setDefaultComponents();
+
+    if (this.config.mode === "production") {
+      // TODO: Move files to dist folder
+    }
+  }
+
+  get(key: string): { module: string; html?: string | undefined } {
     return this.modules[key];
   }
 
-  set(key: string, value: string): string {
-    return this.modules[key] = value;
+  set(key: string, module: string, html?: string): void {
+    this.modules[key] = { module, html };
   }
 
   keys(): Array<string> {
@@ -63,18 +71,9 @@ export class ModuleHandler {
   }
 
   /**
-   * Writes all files in `modules` to `${appRoot}/.tails/`
+   * Loads App, Document & bootstrap.js. This MUST be called AFTER
+   * `writeAll` as loadXComponent expects the manifest to be built.
    */
-  async writeAll(): Promise<void> {
-    await this.writeModules();
-    await this.writeManifest();
-
-    if (this.config.mode === "production") {
-      // await this.writeHTML();
-      // Copy files to /dist
-    }
-  }
-
   private async setDefaultComponents(): Promise<void> {
     this.appComponent = await this.loadAppComponent();
     this.documentComponent = await this.loadDocumentComponent();
@@ -83,6 +82,7 @@ export class ModuleHandler {
 
   private async loadAppComponent(): Promise<ComponentType<any>> {
     try {
+      // const path = this.config.assetPath("pages/_app.tsx");
       const path = this.manifest["/pages/_app.tsx.js"].path;
       const { default: appComponent } = await import(path);
 
@@ -94,6 +94,7 @@ export class ModuleHandler {
 
   private async loadDocumentComponent(): Promise<ComponentType<any>> {
     try {
+      // const path = this.config.assetPath("pages/_document.tsx");
       const path = this.manifest["/pages/_document.tsx.js"].path;
       const { default: documentComponent } = await import(path);
 
@@ -115,11 +116,11 @@ export class ModuleHandler {
     return decoder.decode(data);
   }
 
-  private async compile(): Promise<void> {
-    console.log("compiling");
+  private async compile(staticRoutes: string[]): Promise<void> {
     await compileApplication(
       this,
       this.config,
+      staticRoutes,
     );
   }
 
@@ -143,6 +144,19 @@ export class ModuleHandler {
       });
   }
 
+  /**
+   * Writes all files in `modules` to `${appRoot}/.tails/`
+   */
+  async writeAll(): Promise<void> {
+    await this.writeModules();
+    await this.writeManifest();
+
+    if (this.config.mode === "production") {
+      // await this.writeHTML();
+      // Copy files to /dist
+    }
+  }
+
   private async writeManifest() {
     await ensureTextFile(
       `${this.appRoot}/.tails/manifest.json`,
@@ -157,39 +171,11 @@ export class ModuleHandler {
   }
 
   private async writeModule(key: string) {
-    const module = this.get(key);
+    const { module, html } = this.get(key);
     const path = `${this.appRoot}/.tails/src${key}`;
 
-    this.manifest[key] = { path, module };
+    this.manifest[key] = { path, module, html };
     await ensureTextFile(path, module);
-  }
-
-  private async writeHTML() {
-    await console.log(
-      "Cannot generate html from compiled modules until imports are transformed",
-    );
-    // const manifestKeys = Object.keys(this.manifest);
-    // const App = this.appComponent;
-    // const Document = this.documentComponent;
-
-    // if (!App || !Document) {
-    //   // TODO: App should be defined
-    //   throw new Error();
-    // }
-
-    // for (const key of manifestKeys) {
-    //   if (key.includes("_app") || key.includes("_document")) continue;
-
-    //   const { path } = this.manifest[key];
-    //   const Component = (await import(path)).default;
-
-    //   const html = generateHTML(
-    //     App,
-    //     Document,
-    //     Component,
-    //   );
-
-    //   console.log(html);
-    // }
+    if (html) await ensureTextFile(`${path}.html`, html);
   }
 }

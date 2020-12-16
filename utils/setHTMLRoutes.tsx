@@ -1,3 +1,4 @@
+import { ModuleHandler } from "../core/module_handler.ts";
 import {
   ComponentType,
   Context,
@@ -5,7 +6,7 @@ import {
   renderToString,
   Router,
 } from "../deps.ts";
-import { Route } from "../types.ts";
+import { Modules, Route } from "../types.ts";
 
 // TODO: Duplicate
 async function importComponent(path: string) {
@@ -13,12 +14,18 @@ async function importComponent(path: string) {
 }
 
 export async function setHTMLRoutes(
-  App: ComponentType<any>,
-  Document: ComponentType<any>,
+  moduleHandler: ModuleHandler,
   routes: Record<string, Route>,
   router: Router,
   assetPath: (asset: string) => string,
 ) {
+  const App = moduleHandler.appComponent;
+  const Document = moduleHandler.documentComponent;
+
+  if (!App || !Document) {
+    throw new Error("_app or _document could not be loaded");
+  }
+
   console.log("HTML ROUTES:\n");
   await Object.keys(routes).forEach(async (route) => {
     console.log(`Route: ${route}`);
@@ -27,9 +34,13 @@ export async function setHTMLRoutes(
       assetPath(`pages/${routes[route].page}`),
     );
 
+    const body = routes[route].ssg
+      ? () => fetchHtml(routes[route].page, moduleHandler.modules)
+      : () => generateHTML(App, Document, Component);
+
     router.get(route, (context: Context) => {
       context.response.type = "text/html";
-      context.response.body = generateHTML(App, Document, Component);
+      context.response.body = body();
     });
   });
 
@@ -48,4 +59,9 @@ export function generateHTML(
       <App Page={Component} pageProps={{}} />
     </Document>,
   );
+}
+
+// TODO: Should not be undefined
+function fetchHtml(page: string | undefined, modules: Modules) {
+  return modules[`/pages/${page}.js`].html;
 }

@@ -1,5 +1,5 @@
 import { TestController } from "../src/controllers/test_controller.ts";
-import { logger, Router } from "https://denopkg.com/andrewc910/tailsjs/mod.ts";
+import { logger, Router } from "../../../mod.ts";
 
 export default class extends Router {
   drawRoutes() {
@@ -34,6 +34,7 @@ export default class extends Router {
         {
           path: "/about",
           page: "about.tsx",
+          ssg: false,
         },
       );
     });

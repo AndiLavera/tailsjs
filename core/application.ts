@@ -25,8 +25,8 @@ export class Application {
     this.mode = mode;
     this.reload = reload;
     this.config = new Configuration(appDir, mode, building);
-    this.routeHandler = new RouteHandler(this.config);
     this.moduleHandler = new ModuleHandler(this.config);
+    this.routeHandler = new RouteHandler(this.config, this.moduleHandler);
   }
 
   get buildDir() {
@@ -51,8 +51,12 @@ export class Application {
 
     await this.config.loadConfig();
     await this.init(this.reload);
+
     await this.moduleHandler.init();
-    await this.routeHandler.init(this.moduleHandler);
+    await this.routeHandler.init();
+
+    await this.moduleHandler.build(this.routeHandler._allStaticRoutes);
+    await this.routeHandler.build();
 
     log.info(
       "Project loaded in " + Math.round(performance.now() - startTime) + "ms",
@@ -68,7 +72,11 @@ export class Application {
 
     await this.config.loadConfig();
     await this.init(this.reload);
+
     await this.moduleHandler.init({ building: true });
+    await this.routeHandler.init();
+
+    await this.moduleHandler.build(this.routeHandler._allStaticRoutes);
 
     log.info(
       "Project built in " + Math.round(performance.now() - startTime) + "ms",
@@ -84,7 +92,7 @@ export class Application {
     const startTime = performance.now();
     await this.config.loadConfig();
     await this.moduleHandler.init();
-    await this.routeHandler.init(this.moduleHandler);
+    await this.routeHandler.init();
 
     log.info(
       "Project started in " + Math.round(performance.now() - startTime) + "ms",
