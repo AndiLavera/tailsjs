@@ -34,6 +34,8 @@ export default class extends Router {
         {
           path: "/about",
           page: "about.tsx",
+          module: TestController,
+          method: "show",
           ssg: false,
         },
       );

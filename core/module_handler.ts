@@ -43,6 +43,7 @@ export class ModuleHandler {
     if (this.config.mode === "production" && !options.building) {
       await this.loadManifest();
       this.setModules();
+      await this.setDefaultComponents();
       return;
     }
   }
@@ -82,7 +83,6 @@ export class ModuleHandler {
 
   private async loadAppComponent(): Promise<ComponentType<any>> {
     try {
-      // const path = this.config.assetPath("pages/_app.tsx");
       const path = this.manifest["/pages/_app.tsx.js"].path;
       const { default: appComponent } = await import(path);
 
@@ -94,7 +94,6 @@ export class ModuleHandler {
 
   private async loadDocumentComponent(): Promise<ComponentType<any>> {
     try {
-      // const path = this.config.assetPath("pages/_document.tsx");
       const path = this.manifest["/pages/_document.tsx.js"].path;
       const { default: documentComponent } = await import(path);
 

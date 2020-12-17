@@ -6,10 +6,10 @@ import { path, walk } from "../std.ts";
 import { Middleware, Modules, Paths, Route } from "../types.ts";
 import { setHTMLRoutes } from "../utils/setHTMLRoutes.tsx";
 import { ModuleHandler } from "../core/module_handler.ts";
+import { getContentType } from "../mime.ts";
 
 export class RouteHandler {
   router: Router;
-  #bootstrap: string;
 
   readonly serverRouters: ServerRouter[];
 
@@ -19,7 +19,6 @@ export class RouteHandler {
   constructor(config: Configuration, moduleHandler: ModuleHandler) {
     this.config = config;
     this.serverRouters = [];
-    this.#bootstrap = "";
     this.router = new FakeRouter();
     this.#moduleHandler = moduleHandler;
   }
@@ -32,13 +31,6 @@ export class RouteHandler {
     await this.prepareRouter();
   }
 
-  async build(): Promise<void> {
-    this.#bootstrap = this.#moduleHandler.bootstrap;
-
-    await this.setUserRoutes();
-    this.setJSRoutes();
-  }
-
   async prepareRouter(): Promise<void> {
     const routesPath = path.join(this.config.appRoot, "config/routes.ts");
     const { default: routes } = await import("file://" + routesPath);
@@ -46,6 +38,12 @@ export class RouteHandler {
     const router = new routes();
     router.drawRoutes();
     this.router = router;
+  }
+
+  async build(): Promise<void> {
+    await this.setUserRoutes();
+    this.setJSRoutes();
+    await this.setPublicRoutes();
   }
 
   setJSRoutes(): void {
@@ -79,7 +77,7 @@ export class RouteHandler {
       })
       .get("/bootstrap.ts", (context: Context) => {
         context.response.type = "application/javascript";
-        context.response.body = this.#bootstrap;
+        context.response.body = this.#moduleHandler.bootstrap;
       });
 
     this.serverRouters.push(router);
@@ -116,6 +114,31 @@ export class RouteHandler {
     }
   }
 
+  async setPublicRoutes() {
+    const router = new ServerRouter();
+
+    const dir = path.join(this.config.appRoot, "public");
+    const decoder = new TextDecoder("utf-8");
+
+    for await (const { path: staticFilePath } of walk(dir)) {
+      if (dir === staticFilePath) continue;
+
+      const routePath = staticFilePath.replace(dir, "");
+      const data = await Deno.readFile(staticFilePath);
+      const file = decoder.decode(data);
+
+      router.get(
+        routePath,
+        (context: Context) => {
+          context.response.type = getContentType(routePath);
+          context.response.body = file;
+        },
+      );
+    }
+
+    this.serverRouters.push(router);
+  }
+
   // TODO: Implement other http methods
   // TODO: Too many arguments
   private setRoute(
@@ -128,6 +151,7 @@ export class RouteHandler {
       case "get":
         if (pipeline === "web") {
           setHTMLRoutes(
+            this,
             this.#moduleHandler,
             routes,
             router,
@@ -169,10 +193,26 @@ export class RouteHandler {
   }
 
   private setAPIRoute(path: string, route: Route, router: ServerRouter) {
+    const { controller, method } = this.fetchController(route);
+    router.get(`/api${path}`, controller[method]);
+  }
+
+  fetchController(route: Route) {
     if (route.module) {
       const controller = this.router._fetchController(route.module);
       const method = route.method || "";
-      router.get(`/api${path}`, controller[method]);
+
+      if (!controller[method]) {
+        throw new Error(
+          `No method ${method} found for controller ${controller}`,
+        );
+      }
+
+      return { controller, method };
     }
+
+    throw new Error(
+      `Route module could not be found. ${route}`,
+    );
   }
 }

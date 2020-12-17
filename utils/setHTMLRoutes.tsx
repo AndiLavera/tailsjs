@@ -1,10 +1,12 @@
+import Controller from "../controller/controller.ts";
+import { RouteHandler } from "../controller/route_handler.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import {
   ComponentType,
   Context,
   React,
   renderToString,
-  Router,
+  Router as ServerRouter,
 } from "../deps.ts";
 import { Modules, Route } from "../types.ts";
 
@@ -14,9 +16,10 @@ async function importComponent(path: string) {
 }
 
 export async function setHTMLRoutes(
+  routeHandler: RouteHandler,
   moduleHandler: ModuleHandler,
   routes: Record<string, Route>,
-  router: Router,
+  router: ServerRouter,
   assetPath: (asset: string) => string,
 ) {
   const App = moduleHandler.appComponent;
@@ -27,22 +30,35 @@ export async function setHTMLRoutes(
   }
 
   console.log("HTML ROUTES:\n");
-  await Object.keys(routes).forEach(async (route) => {
-    console.log(`Route: ${route}`);
-    console.log(`Page: ${assetPath(`pages/${routes[route].page}`)}`);
+
+  for await (const path of Object.keys(routes)) {
+    const route = routes[path];
+
+    console.log(`Route: ${path}`);
+    console.log(`Page: ${assetPath(`pages/${route.page}`)}`);
     const Component = await importComponent(
-      assetPath(`pages/${routes[route].page}`),
+      assetPath(`pages/${route.page}`),
     );
 
-    const body = routes[route].ssg
-      ? () => fetchHtml(routes[route].page, moduleHandler.modules)
-      : () => generateHTML(App, Document, Component);
+    let props: Record<string, any> = {};
+    let controller: new () => Controller | undefined;
+    let method: string | undefined;
+    try {
+      let { controller, method } = routeHandler.fetchController(route);
+      props = controller[method]();
+    } catch {
+      console.log(route.page, " module could not be found");
+    }
 
-    router.get(route, (context: Context) => {
+    const body = route.ssg
+      ? () => fetchHtml(route.page, moduleHandler.modules)
+      : () => generateHTML(App, Document, Component, props);
+
+    router.get(path, (context: Context) => {
       context.response.type = "text/html";
       context.response.body = body();
     });
-  });
+  }
 
   console.log("\n");
 
@@ -53,10 +69,11 @@ export function generateHTML(
   App: ComponentType<any>,
   Document: ComponentType<any>,
   Component: ComponentType<any>,
+  props: Record<string, any> = {},
 ): string {
   return renderToString(
-    <Document>
-      <App Page={Component} pageProps={{}} />
+    <Document initialData={props}>
+      <App Page={Component} pageProps={props} />
     </Document>,
   );
 }

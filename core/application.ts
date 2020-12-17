@@ -55,11 +55,18 @@ export class Application {
     await this.moduleHandler.init();
     await this.routeHandler.init();
 
+    const compilationTime = performance.now();
     await this.moduleHandler.build(this.routeHandler._allStaticRoutes);
+    log.info(
+      `Project compiled in ${
+        Math.round(performance.now() - compilationTime)
+      }ms`,
+    );
+
     await this.routeHandler.build();
 
     log.info(
-      "Project loaded in " + Math.round(performance.now() - startTime) + "ms",
+      `Project loaded in ${Math.round(performance.now() - startTime)}ms`,
     );
   }
 

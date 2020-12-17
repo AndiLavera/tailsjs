@@ -2,6 +2,15 @@ import Controller from "./controller.ts";
 import { pathsFactory } from "./utils.ts";
 import { Middleware, Paths, Routes } from "../types.ts";
 import { path } from "../std.ts";
+import { Route } from "https://deno.land/x/oak@v6.4.0/router.ts";
+
+interface RouteData {
+  path: string;
+  module?: new () => Controller;
+  page?: string;
+  method?: string;
+  ssg?: boolean;
+}
 
 export abstract class Router {
   _pipelines: Routes;
@@ -113,22 +122,31 @@ export abstract class Router {
     throw new Error(`Must supply a module & method or page for route: ${path}`);
   }
 
-  get({ path, module, page, method, ssg }: {
-    path: string;
-    module?: new () => Controller;
-    page?: string;
-    method?: string;
-    ssg?: boolean;
-  }): void {
-    if (module && method) {
+  get(route: RouteData): void {
+    const { path, module, page, method } = route;
+
+    if (isAPIRoute(route)) {
       this._paths.get[path] = { module, method, ssg: false };
       return;
     }
 
-    if (page) {
-      const route = { page, ssg: false };
-      if (ssg || ssg === undefined) route.ssg = true;
-      this._paths.get[path] = route;
+    if (isStaticWebRouteWithData(route)) {
+      this._paths.get[path] = { module, method, page, ssg: true };
+      return;
+    }
+
+    if (isWebRouteWithData(route)) {
+      this._paths.get[path] = { module, method, page, ssg: false };
+      return;
+    }
+
+    if (isStaticWebRoute(route)) {
+      this._paths.get[path] = { page, ssg: true };
+      return;
+    }
+
+    if (isWebRoute(route)) {
+      this._paths.get[path] = { page, ssg: false };
       return;
     }
 
@@ -248,4 +266,41 @@ export abstract class Router {
 
     throw new Error(`Must supply a module & method or page for route: ${path}`);
   }
+}
+
+function requiresController(route: RouteData) {
+  return !!route.module && !!route.method;
+}
+
+/**
+ * Returns `true` if module & method exist but no page
+ *
+ * @param route
+ */
+function isAPIRoute(route: RouteData): boolean {
+  return requiresController(route) && !isWebRoute(route);
+}
+
+function isWebRoute(route: RouteData): boolean {
+  return !!route.page;
+}
+
+function isStatic(route: RouteData): boolean {
+  if (route.ssg || route.ssg === undefined) {
+    return true;
+  }
+
+  return false;
+}
+
+function isStaticWebRoute(route: RouteData): boolean {
+  return isWebRoute(route) && isStatic(route);
+}
+
+function isWebRouteWithData(route: RouteData): boolean {
+  return isWebRoute(route) && requiresController(route);
+}
+
+function isStaticWebRouteWithData(route: RouteData): boolean {
+  return isStaticWebRoute(route) && requiresController(route);
 }

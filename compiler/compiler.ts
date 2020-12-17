@@ -8,59 +8,6 @@ import { generateHTML } from "../utils/setHTMLRoutes.tsx";
 import { ComponentType } from "../deps.ts";
 
 /**
- * Compiles the path passed in. Raises and error if any compilation errors occur.
- * Will genenerate HTML for each SSG page.
- *
- * @param path
- * @param moduleHandler
- * @param assetDir
- * @param callback
- */
-async function compile(
-  path: string,
-  moduleHandler: ModuleHandler,
-  assetDir: string,
-  callback: (path: string) => Promise<string | undefined>,
-): Promise<void> {
-  const [diagnostics, bundle] = await Deno.compile(path);
-
-  if (diagnostics) {
-    console.log(diagnostics);
-    throw new Error(`Could not compile ${path}`);
-  }
-
-  for await (const moduleKey of Object.keys(bundle)) {
-    const key = moduleKey.replace(`file://${assetDir}`, "");
-    let html;
-
-    if (moduleKey.includes(path) && !moduleKey.includes(".map")) {
-      html = await callback(path);
-    }
-
-    moduleHandler.set(key, bundle[moduleKey], html);
-  }
-}
-
-async function bundle(
-  path: string,
-  moduleHandler: ModuleHandler,
-  assetDir: string,
-): Promise<void> {
-  const [diagnostics, bundle] = await Deno.bundle(path);
-
-  if (diagnostics) {
-    console.log(diagnostics);
-    throw new Error(`Could not compile ${path}`);
-  }
-
-  const key = path
-    .replace(`${assetDir}`, "")
-    .replace(reModuleExt, ".js");
-
-  moduleHandler.set(key, bundle);
-}
-
-/**
  * Walks the `pages` directory and compiles all files. `Deno.compile` will
  * compile all imports as well. These are injected into `moduleHandler.modules`.
  *
@@ -113,10 +60,64 @@ export async function compileApplication(
     if (mode === "production") {
       // await bundle(path, moduleHandler, assetDir);
       await compile(path, moduleHandler, assetDir, callback);
+      // TODO: Compile and injecting modules should be 2 functions, not 1
     } else {
       await compile(path, moduleHandler, assetDir, callback);
     }
   }
+}
+
+/**
+ * Compiles the path passed in. Raises and error if any compilation errors occur.
+ * Will genenerate HTML for each SSG page.
+ *
+ * @param path
+ * @param moduleHandler
+ * @param assetDir
+ * @param callback
+ */
+async function compile(
+  path: string,
+  moduleHandler: ModuleHandler,
+  assetDir: string,
+  callback: (path: string) => Promise<string | undefined>,
+): Promise<void> {
+  const [diagnostics, bundle] = await Deno.compile(path);
+
+  if (diagnostics) {
+    console.log(diagnostics);
+    throw new Error(`Could not compile ${path}`);
+  }
+
+  for await (const moduleKey of Object.keys(bundle)) {
+    const key = moduleKey.replace(`file://${assetDir}`, "");
+    let html;
+
+    if (moduleKey.includes(path) && !moduleKey.includes(".map")) {
+      html = await callback(path);
+    }
+
+    moduleHandler.set(key, bundle[moduleKey], html);
+  }
+}
+
+async function bundle(
+  path: string,
+  moduleHandler: ModuleHandler,
+  assetDir: string,
+): Promise<void> {
+  const [diagnostics, bundle] = await Deno.bundle(path);
+
+  if (diagnostics) {
+    console.log(diagnostics);
+    throw new Error(`Could not compile ${path}`);
+  }
+
+  const key = path
+    .replace(`${assetDir}`, "")
+    .replace(reModuleExt, ".js");
+
+  moduleHandler.set(key, bundle);
 }
 
 async function render(
@@ -124,7 +125,6 @@ async function render(
   App: ComponentType<any>,
   Document: ComponentType<any>,
 ): Promise<string | undefined> {
-  console.log(path);
   const { default: Component } = await import(path);
 
   return generateHTML(
