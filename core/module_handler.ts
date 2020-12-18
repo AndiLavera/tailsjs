@@ -5,6 +5,7 @@ import { path } from "../std.ts";
 import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
 import { generateHTML } from "../utils/setHTMLRoutes.tsx";
+import { reImportPath, reModuleExt } from "./utils.ts";
 
 interface ManifestModule {
   path: string;
@@ -50,6 +51,7 @@ export class ModuleHandler {
 
   async build(staticRoutes: string[]) {
     await this.compile(staticRoutes);
+    this.rewriteImportPaths();
     await this.writeAll();
 
     await this.setDefaultComponents();
@@ -83,23 +85,24 @@ export class ModuleHandler {
 
   private async loadAppComponent(): Promise<ComponentType<any>> {
     try {
-      const path = this.manifest["/pages/_app.tsx.js"].path;
+      const { path } = this.manifest["/pages/_app.js"];
       const { default: appComponent } = await import(path);
 
       return appComponent;
     } catch {
+      // TODO: path is undefined due to block level scoping
       throw new Error(`Cannot find pages/_app.tsx. Path tried: ${path}`);
     }
   }
 
   private async loadDocumentComponent(): Promise<ComponentType<any>> {
     try {
-      const path = this.manifest["/pages/_document.tsx.js"].path;
+      const { path } = this.manifest["/pages/_document.js"];
       const { default: documentComponent } = await import(path);
 
       return documentComponent;
     } catch {
-      throw new Error(`Cannot find pages/_document.tsx. Path tried: ${path}`);
+      throw new Error(`Cannot find pages/_document.js. Path tried: ${path}`);
     }
   }
 
@@ -140,6 +143,22 @@ export class ModuleHandler {
       .forEach((key) => {
         const { module } = this.manifest[key];
         this.set(key, module);
+      });
+  }
+
+  private rewriteImportPaths(): void {
+    Object.keys(this.modules)
+      .filter((key) => !key.includes(".map"))
+      .forEach((key) => {
+        let { module } = this.modules[key];
+        const matched = module.match(reImportPath) || [];
+
+        matched.forEach((path) => {
+          const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
+          module = module.replace(path, alteredPath);
+        });
+
+        this.modules[key].module = module;
       });
   }
 

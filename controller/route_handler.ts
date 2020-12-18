@@ -54,7 +54,6 @@ export class RouteHandler {
     Object.keys(modules).forEach((key) => {
       const file = modules[key].module;
       const path = key
-        .replace(".js", "")
         .replace("/pages", "");
 
       console.log(path);
@@ -198,6 +197,7 @@ export class RouteHandler {
   }
 
   fetchController(route: Route) {
+    console.log(route);
     if (route.module) {
       const controller = this.router._fetchController(route.module);
       const method = route.method || "";

@@ -1,6 +1,6 @@
 import React from "https://esm.sh/react@17.0.1";
 import { hydrate } from "https://esm.sh/react-dom@17.0.1";
-import App from "./_app.tsx";
+import App from "./_app.js";
 
 export async function bootstrap() {
   /**
@@ -21,7 +21,7 @@ export async function bootstrap() {
   }
 
   const importedComponent = await import(
-    `${path}.tsx`
+    `${path}.js`
   );
 
   const initialData = htmlDecode(

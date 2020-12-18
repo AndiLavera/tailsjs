@@ -41,13 +41,19 @@ export async function setHTMLRoutes(
     );
 
     let props: Record<string, any> = {};
-    let controller: new () => Controller | undefined;
-    let method: string | undefined;
-    try {
+    // let controller: new () => Controller | undefined;
+    // let method: string | undefined;
+    // try {
+    //   let { controller, method } = routeHandler.fetchController(route);
+    //   console.log("hit");
+    //   props = controller[method]();
+    // } catch {
+    //   console.log(route.page, " module could not be found");
+    // }
+
+    if (route.module) {
       let { controller, method } = routeHandler.fetchController(route);
       props = controller[method]();
-    } catch {
-      console.log(route.page, " module could not be found");
     }
 
     const body = route.ssg
@@ -80,5 +86,8 @@ export function generateHTML(
 
 // TODO: Should not be undefined
 function fetchHtml(page: string | undefined, modules: Modules) {
-  return modules[`/pages/${page}.js`].html;
+  const cleanedPage = (page as any).replace(/\.(jsx|mjs|tsx?)/g, "");
+  return modules[
+    `/pages/${cleanedPage}.js`
+  ].html;
 }

@@ -12,6 +12,8 @@ export const reStyleModuleExt = /\.(css|less)$/i;
 export const reMDExt = /\.(md|markdown)$/i;
 export const reLocaleID = /^[a-z]{2}(-[a-zA-Z0-9]+)?$/;
 export const reHashJs = new RegExp(`\\.[0-9a-fx]{${hashShort}}\\.js$`, "i");
+export const reImportPath =
+  /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
 
 export const KB = 1024;
 export const MB = KB ** 2;

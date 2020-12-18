@@ -90,7 +90,10 @@ async function compile(
   }
 
   for await (const moduleKey of Object.keys(bundle)) {
-    const key = moduleKey.replace(`file://${assetDir}`, "");
+    const key = moduleKey
+      .replace(`file://${assetDir}`, "")
+      .replace(/\.(jsx|mjs|tsx?)/g, "");
+
     let html;
 
     if (moduleKey.includes(path) && !moduleKey.includes(".map")) {
