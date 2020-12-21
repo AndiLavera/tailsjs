@@ -56,7 +56,9 @@ export class Application {
     await this.routeHandler.init();
 
     const compilationTime = performance.now();
-    await this.moduleHandler.build(this.routeHandler._allStaticRoutes);
+    const staticRoutes = this.routeHandler._allStaticRoutes;
+
+    await this.moduleHandler.build(staticRoutes);
     log.info(
       `Project compiled in ${
         Math.round(performance.now() - compilationTime)
@@ -68,6 +70,8 @@ export class Application {
     log.info(
       `Project loaded in ${Math.round(performance.now() - startTime)}ms`,
     );
+
+    this.moduleHandler.watch(staticRoutes);
   }
 
   /**

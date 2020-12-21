@@ -21,7 +21,7 @@ export default function Document(
         <main id="app">
           {children}
         </main>
-        <script id="blah" type="application/json">
+        <script id="ssr-data" type="application/json">
           {JSON.stringify(initialData).replace(
             /</g,
             "\\u003c",

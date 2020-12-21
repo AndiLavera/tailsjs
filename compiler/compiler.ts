@@ -65,6 +65,8 @@ export async function compileApplication(
       await compile(path, moduleHandler, assetDir, callback);
     }
   }
+
+  // await transpileApplication(config, moduleHandler);
 }
 
 /**
@@ -76,7 +78,7 @@ export async function compileApplication(
  * @param assetDir
  * @param callback
  */
-async function compile(
+export async function compile(
   path: string,
   moduleHandler: ModuleHandler,
   assetDir: string,
@@ -123,7 +125,23 @@ async function bundle(
   moduleHandler.set(key, bundle);
 }
 
-async function render(
+async function transpileApplication(
+  config: Configuration,
+  moduleHandler: ModuleHandler,
+) {
+  const root = path.join(config.appRoot, "src");
+  const folders = Deno.readDirSync(root);
+  for await (const folder of folders) {
+    if (
+      !["pages", "components"].includes(folder.name) &&
+      folder.isDirectory
+    ) {
+      // TODO: Walk dirs, transpile & set into modules
+    }
+  }
+}
+
+export async function render(
   path: string,
   App: ComponentType<any>,
   Document: ComponentType<any>,

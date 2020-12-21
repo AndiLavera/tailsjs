@@ -26,7 +26,7 @@ export async function bootstrap() {
 
   const initialData = htmlDecode(
     // deno-lint-ignore no-undef
-    document.getElementById("blah").innerHTML,
+    document.getElementById("ssr-data").innerHTML,
   );
 
   hydrate(

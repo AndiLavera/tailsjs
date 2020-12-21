@@ -1,11 +1,12 @@
-import { compileApplication } from "../compiler/compiler.ts";
+import { compile, compileApplication, render } from "../compiler/compiler.ts";
 import { ComponentType } from "../deps.ts";
-import { ensureTextFile } from "../fs.ts";
+import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
 import { generateHTML } from "../utils/setHTMLRoutes.tsx";
 import { reImportPath, reModuleExt } from "./utils.ts";
+import log from "../logger/logger.ts";
 
 interface ManifestModule {
   path: string;
@@ -73,6 +74,36 @@ export class ModuleHandler {
     return Object.keys(this.modules);
   }
 
+  // Watch fs
+  // compile page/component
+  // update
+  async watch(staticRoutes: string[]) {
+    const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
+    log.info("Start watching code changes...");
+
+    for await (const event of watch) {
+      if (event.kind === "access") continue;
+
+      log.info(`Event kind: ${event.kind}`);
+      for (const path of event.paths) {
+        const startTime = performance.now();
+        log.info(
+          `Processing ${path.split("/").slice(-1)[0]}`,
+        );
+        // Check if file was deleted
+        if (!existsFile(path)) continue;
+
+        await this.recompile(path, staticRoutes);
+
+        log.info(
+          `Processing completed in ${
+            Math.round(performance.now() - startTime)
+          }ms`,
+        );
+      }
+    }
+  }
+
   /**
    * Loads App, Document & bootstrap.js. This MUST be called AFTER
    * `writeAll` as loadXComponent expects the manifest to be built.
@@ -91,7 +122,7 @@ export class ModuleHandler {
       return appComponent;
     } catch {
       // TODO: path is undefined due to block level scoping
-      throw new Error(`Cannot find pages/_app.tsx. Path tried: ${path}`);
+      throw new Error(`Cannot find pages/_app.js. Path tried: ${path}`);
     }
   }
 
@@ -138,6 +169,9 @@ export class ModuleHandler {
     }
   }
 
+  /**
+   * Iterate over `this.manifest` and set `this.modules`.
+   */
   private setModules(): void {
     Object.keys(this.manifest)
       .forEach((key) => {
@@ -146,20 +180,27 @@ export class ModuleHandler {
       });
   }
 
+  /**
+   * Mutate & iterate over modules that are not `.map`
+   * replacing all local import paths with `.ts`, `.tsx`
+   * or `.jsx` with `.js`.
+   */
   private rewriteImportPaths(): void {
     Object.keys(this.modules)
       .filter((key) => !key.includes(".map"))
-      .forEach((key) => {
-        let { module } = this.modules[key];
-        const matched = module.match(reImportPath) || [];
+      .forEach((key) => this.rewriteImportPath(key));
+  }
 
-        matched.forEach((path) => {
-          const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
-          module = module.replace(path, alteredPath);
-        });
+  private rewriteImportPath(key: string): void {
+    let { module } = this.modules[key];
+    const matched = module.match(reImportPath) || [];
 
-        this.modules[key].module = module;
-      });
+    matched.forEach((path) => {
+      const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
+      module = module.replace(path, alteredPath);
+    });
+
+    this.modules[key].module = module;
   }
 
   /**
@@ -195,5 +236,68 @@ export class ModuleHandler {
     this.manifest[key] = { path, module, html };
     await ensureTextFile(path, module);
     if (html) await ensureTextFile(`${path}.html`, html);
+  }
+
+  // TODO: Move into compiler
+  private async recompile(filePath: string, staticRoutes: string[]) {
+    // await compile(
+    //   path,
+    //   this,
+    //   this.config.assetDir,
+    //   async (path) => {
+    //     await console.log("rendering html");
+    //     return undefined;
+    //   },
+    // );
+    const [diagnostics, bundle] = await Deno.compile(filePath);
+
+    if (diagnostics) {
+      console.log(diagnostics);
+      throw new Error(`Could not compile ${filePath}`);
+    }
+
+    for await (const moduleKey of Object.keys(bundle)) {
+      const key = moduleKey
+        .replace(`file://${this.config.assetDir}`, "")
+        .replace(/\.(jsx|mjs|tsx?)/g, "");
+
+      let html;
+
+      if (moduleKey.includes(filePath) && !moduleKey.includes(".map")) {
+        html = await this.renderHTML(filePath, staticRoutes);
+      }
+
+      this.set(key, bundle[moduleKey], html);
+      this.rewriteImportPath(key);
+      this.writeModule(key);
+    }
+  }
+
+  private async renderHTML(filePath: string, staticRoutes: string[]) {
+    if (
+      filePath.includes("_app") || filePath.includes("_document")
+    ) {
+      return;
+    }
+
+    const hasStaticRoute = staticRoutes.filter((route) =>
+      filePath.includes(route)
+    );
+    if (hasStaticRoute.length === 0) return;
+
+    const pagesDir = this.config.assetPath("pages");
+    const { default: App } = await import(
+      path.join(pagesDir, "_app.tsx")
+    );
+
+    const { default: Document } = await import(
+      path.join(pagesDir, "_document.tsx")
+    );
+
+    return await render(
+      filePath,
+      App,
+      Document,
+    );
   }
 }
