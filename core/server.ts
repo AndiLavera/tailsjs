@@ -9,7 +9,11 @@ export async function start(
   reload = false,
 ): Promise<void> {
   const application = new Application(appDir, mode, reload);
-  await application.ready();
+  if (mode === "development") {
+    await application.ready();
+  } else {
+    await application.start();
+  }
 
   const server = new Server();
 

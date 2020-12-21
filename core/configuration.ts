@@ -94,6 +94,7 @@ export class Configuration {
     ];
   }
 
+  // TODO: This is bugged
   get isDev() {
     return (this.mode === "development" || !this.isBuilding);
   }

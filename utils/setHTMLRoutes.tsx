@@ -41,15 +41,6 @@ export async function setHTMLRoutes(
     );
 
     let props: Record<string, any> = {};
-    // let controller: new () => Controller | undefined;
-    // let method: string | undefined;
-    // try {
-    //   let { controller, method } = routeHandler.fetchController(route);
-    //   console.log("hit");
-    //   props = controller[method]();
-    // } catch {
-    //   console.log(route.page, " module could not be found");
-    // }
 
     if (route.module) {
       let { controller, method } = routeHandler.fetchController(route);

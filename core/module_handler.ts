@@ -175,8 +175,8 @@ export class ModuleHandler {
   private setModules(): void {
     Object.keys(this.manifest)
       .forEach((key) => {
-        const { module } = this.manifest[key];
-        this.set(key, module);
+        const { module, html } = this.manifest[key];
+        this.set(key, module, html);
       });
   }
 

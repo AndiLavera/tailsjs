@@ -9,6 +9,8 @@ import { ModuleHandler } from "../core/module_handler.ts";
 import { ProductionAssetRouter } from "./production_asset_router.ts";
 import { DevelopmentAssetRouter } from "./development_asset_router.ts";
 
+type AssetRouter = ProductionAssetRouter | DevelopmentAssetRouter;
+
 // TODO: For dev mode, fetch modules on each route hit for ModuleHandler#watch
 // Prod mode should load everything into routes like current set up
 export class RouteHandler {
@@ -17,13 +19,17 @@ export class RouteHandler {
   readonly serverRouters: ServerRouter[];
 
   private readonly config: Configuration;
-  private readonly assetRouter: ProductionAssetRouter | DevelopmentAssetRouter;
+  private readonly assetRouter: AssetRouter;
   #moduleHandler: ModuleHandler;
 
-  constructor(config: Configuration, moduleHandler: ModuleHandler) {
+  constructor(
+    config: Configuration,
+    moduleHandler: ModuleHandler,
+    assetRouter: AssetRouter = new DevelopmentAssetRouter(),
+  ) {
     this.config = config;
     this.serverRouters = [];
-    this.assetRouter = this.fetchAssetRouter(config.mode);
+    this.assetRouter = assetRouter;
     this.router = new FakeRouter();
     this.#moduleHandler = moduleHandler;
   }

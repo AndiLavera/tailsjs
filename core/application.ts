@@ -4,8 +4,8 @@ import { ensureDir, path } from "../std.ts";
 import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
-import { compileApplication } from "../compiler/compiler.ts";
 import { ModuleHandler } from "./module_handler.ts";
+import { ProductionAssetRouter } from "../controller/production_asset_router.ts";
 
 export class Application {
   readonly config: Configuration;
@@ -26,7 +26,7 @@ export class Application {
     this.reload = reload;
     this.config = new Configuration(appDir, mode, building);
     this.moduleHandler = new ModuleHandler(this.config);
-    this.routeHandler = new RouteHandler(this.config, this.moduleHandler);
+    this.routeHandler = this.fetchRouteHandler();
   }
 
   get buildDir() {
@@ -60,9 +60,7 @@ export class Application {
 
     await this.moduleHandler.build(staticRoutes);
     log.info(
-      `Project compiled in ${
-        Math.round(performance.now() - compilationTime)
-      }ms`,
+      `Compliation time: ${Math.round(performance.now() - compilationTime)}ms`,
     );
 
     await this.routeHandler.build();
@@ -104,6 +102,7 @@ export class Application {
     await this.config.loadConfig();
     await this.moduleHandler.init();
     await this.routeHandler.init();
+    await this.routeHandler.build();
 
     log.info(
       "Project started in " + Math.round(performance.now() - startTime) + "ms",
@@ -128,5 +127,17 @@ export class Application {
     if (this.config.isDev) {
       // this._watch();
     }
+  }
+
+  fetchRouteHandler(): RouteHandler {
+    if (this.mode === "development") {
+      return new RouteHandler(this.config, this.moduleHandler);
+    }
+
+    return new RouteHandler(
+      this.config,
+      this.moduleHandler,
+      new ProductionAssetRouter(),
+    );
   }
 }
