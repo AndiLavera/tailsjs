@@ -1,5 +1,9 @@
 import { Context } from "./deps.ts";
 import Controller from "./controller/controller.ts";
+import { ProductionAssetRouter } from "./controller/production_asset_router.ts";
+import { DevelopmentAssetRouter } from "./controller/development_asset_router.ts";
+
+export type AssetRouter = ProductionAssetRouter | DevelopmentAssetRouter;
 
 export interface Route {
   module?: new () => Controller;

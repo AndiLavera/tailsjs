@@ -1,6 +1,6 @@
 import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
-import { ComponentType, Context, Router as ServerRouter } from "../deps.ts";
+import { Context, Router as ServerRouter } from "../deps.ts";
 import { path, walk } from "../std.ts";
 import { getContentType } from "../mime.ts";
 

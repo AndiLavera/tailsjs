@@ -1,5 +1,4 @@
-import Controller from "../controller/controller.ts";
-import { RouteHandler } from "../controller/route_handler.ts";
+import { WebRouter } from "../controller/web_router.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import {
   ComponentType,
@@ -10,13 +9,12 @@ import {
 } from "../deps.ts";
 import { Modules, Route } from "../types.ts";
 
-// TODO: Duplicate
 async function importComponent(path: string) {
   return (await import(path)).default;
 }
 
 export async function setHTMLRoutes(
-  routeHandler: RouteHandler,
+  webRouter: WebRouter,
   moduleHandler: ModuleHandler,
   routes: Record<string, Route>,
   router: ServerRouter,
@@ -43,7 +41,7 @@ export async function setHTMLRoutes(
     let props: Record<string, any> = {};
 
     if (route.module) {
-      let { controller, method } = routeHandler.fetchController(route);
+      let { controller, method } = webRouter.fetchController(route);
       props = controller[method]();
     }
 

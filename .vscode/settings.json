@@ -8,7 +8,7 @@
         "editor.defaultFormatter": "denoland.vscode-deno",
     },
     "[typescriptreact]": {
-    "editor.defaultFormatter": "denoland.vscode-deno",
+        "editor.defaultFormatter": "denoland.vscode-deno",
     },
     "deno.enable": true,
     "deno.lint": true,

@@ -2,7 +2,6 @@ import Controller from "./controller.ts";
 import { pathsFactory } from "./utils.ts";
 import { Middleware, Paths, Routes } from "../types.ts";
 import { path } from "../std.ts";
-import { Route } from "https://deno.land/x/oak@v6.4.0/router.ts";
 
 interface RouteData {
   path: string;
@@ -12,6 +11,13 @@ interface RouteData {
   ssg?: boolean;
 }
 
+/**
+ * TODO: API Routes cannot be hot reloaded
+ * Api controllers are instantiated once and
+ * the function is loaded into the router.
+ * We need to reload the entire class and reset
+ * each route.
+ */
 export abstract class Router {
   _pipelines: Routes;
   _paths: Paths;
@@ -38,6 +44,7 @@ export abstract class Router {
    * Iterates over all routes in pipeline `web`. Returns an
    * Array of strings that contain the pages that are SSG.
    */
+  // TODO: Rename to staticWebRoutes
   get _allStaticRoutes(): string[] {
     const routes = [];
     const webRoutes = this._pipelines.web.paths.get;
@@ -49,6 +56,9 @@ export abstract class Router {
 
     return routes;
   }
+
+  // get _dynamicWebRoutes(): string[] {}
+  // get _apiRoutes(): string[] {}
 
   pipeline(pipe: string, callback: () => Middleware): void {
     if (this._pipelines[pipe]) {
