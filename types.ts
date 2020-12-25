@@ -6,7 +6,7 @@ import { DevelopmentAssetRouter } from "./controller/development_asset_router.ts
 export type AssetRouter = ProductionAssetRouter | DevelopmentAssetRouter;
 
 export interface Route {
-  module?: new () => Controller;
+  module?: string;
   method?: string;
   page?: string;
   ssg?: boolean;

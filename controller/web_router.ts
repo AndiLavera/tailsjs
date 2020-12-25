@@ -1,10 +1,12 @@
+import { Context } from "https://deno.land/x/oak@v6.4.1/context.ts";
 import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Router as ServerRouter } from "../deps.ts";
-import { walk } from "../std.ts";
+import { path, walk } from "../std.ts";
 import { Middleware, Paths, Route } from "../types.ts";
 import { setHTMLRoutes } from "../utils/setHTMLRoutes.tsx";
 import { Router } from "./router.ts";
+import log from "../logger/logger.ts";
 
 export class WebRouter {
   private readonly config: Configuration;
@@ -31,7 +33,7 @@ export class WebRouter {
       this.setMiddleware(pipeline.middleware, router);
       await this.setStaticMiddleware(router);
 
-      this._setRoutes(pipeline.paths, router, key);
+      await this._setRoutes(pipeline.paths, router, key);
       serverRouters.push(router);
     }
   }
@@ -54,12 +56,12 @@ export class WebRouter {
 
   // TODO: Implement other http methods
   // TODO: Too many arguments
-  private setRoute(
+  private async setRoute(
     routes: Record<string, Route>,
     router: ServerRouter,
     httpMethod: string,
     pipeline: string,
-  ): void {
+  ): Promise<void> {
     switch (httpMethod) {
       case "get":
         if (pipeline === "web") {
@@ -73,7 +75,7 @@ export class WebRouter {
         }
 
         if (pipeline === "api") {
-          this.setAPIRoutes(
+          await this.setAPIRoutes(
             routes,
             router,
           );
@@ -83,38 +85,60 @@ export class WebRouter {
     }
   }
 
-  private _setRoutes(
+  private async _setRoutes(
     paths: Paths,
     router: ServerRouter,
     pipeline: string,
-  ): void {
-    Object.keys(paths)
-      .forEach((httpMethod) => {
-        const routes = paths[httpMethod];
-        this.setRoute(routes, router, httpMethod, pipeline);
-      });
+  ): Promise<void> {
+    for await (const httpMethod of Object.keys(paths)) {
+      const routes = paths[httpMethod];
+      await this.setRoute(routes, router, httpMethod, pipeline);
+    }
   }
 
-  private setAPIRoutes(
+  private async setAPIRoutes(
     routes: Record<string, Route>,
     router: ServerRouter,
-  ): void {
-    Object.keys(routes)
-      .forEach((path) => {
-        this.setAPIRoute(path, routes[path], router);
-      });
-  }
+  ): Promise<void> {
+    const routeKeys = Object.keys(routes);
 
-  private setAPIRoute(path: string, route: Route, router: ServerRouter) {
-    const { controller, method } = this.fetchController(route);
-    router.get(`/api${path}`, controller[method]);
+    router.use(async (ctx, next) => {
+      const { pathname } = ctx.request.url;
+      const path = pathname.replace("/api", "");
+
+      if (!routeKeys.includes(path)) {
+        await next();
+        return;
+      }
+
+      const { controller, method } = await this.fetchController(
+        routes[path],
+      );
+
+      ctx.response.type = "application/json";
+      ctx.response.body = controller[method]();
+    });
+
+    log.debug("API Routes:");
+    for await (const path of Object.keys(routes)) {
+      // await this.setAPIRoute(path, routes[path], router);
+      console.debug(`  /api${path}`);
+      router.get(`/api${path}`);
+    }
   }
 
   // TODO: Duplicate of DevelopmentWebRouter#fetchController
-  fetchController(route: Route) {
+  async fetchController(route: Route) {
     if (route.module) {
-      // const controller = new route.module();
-      const controller = (this.router as Router)._fetchController(route.module);
+      // TODO: Transpile controllers & load js file from .tails
+      const controllerPath = path.join(
+        this.config.appRoot,
+        "src/controllers",
+        `${route.module}.ts`,
+      );
+
+      const { default: klass } = await import(controllerPath);
+      const controller = new klass();
       const method = route.method || "";
 
       if (!controller[method]) {

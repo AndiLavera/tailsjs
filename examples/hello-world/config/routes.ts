@@ -1,4 +1,4 @@
-import { TestController } from "../src/controllers/test_controller.ts";
+// import { TestController } from "../src/controllers/test_controller.ts";
 import { logger, Router } from "../../../mod.ts";
 
 export default class extends Router {
@@ -18,7 +18,7 @@ export default class extends Router {
     this.routes("api", () => {
       this.get({
         path: "/create",
-        module: TestController,
+        module: "test_controller",
         method: "create",
       });
     });
@@ -34,7 +34,7 @@ export default class extends Router {
         {
           path: "/about",
           page: "about.tsx",
-          module: TestController,
+          module: "test_controller",
           method: "show",
           ssg: false,
         },

@@ -27,6 +27,7 @@ export async function compileApplication(
 
   const { mode, assetDir } = config;
   const pagesDir = config.assetPath("pages");
+  // const controllersDir = config.assetPath("controllers");
   const { default: App } = await import(
     path.join(pagesDir, "_app.tsx")
   );
@@ -66,7 +67,7 @@ export async function compileApplication(
     }
   }
 
-  // await transpileApplication(config, moduleHandler);
+  await transpileApplication(moduleHandler, config, staticRoutes);
 }
 
 /**
@@ -106,39 +107,96 @@ export async function compile(
   }
 }
 
-async function bundle(
-  path: string,
+export async function transpileApplication(
   moduleHandler: ModuleHandler,
-  assetDir: string,
-): Promise<void> {
-  const [diagnostics, bundle] = await Deno.bundle(path);
-
-  if (diagnostics) {
-    console.log(diagnostics);
-    throw new Error(`Could not compile ${path}`);
-  }
-
-  const key = path
-    .replace(`${assetDir}`, "")
-    .replace(reModuleExt, ".js");
-
-  moduleHandler.set(key, bundle);
-}
-
-async function transpileApplication(
   config: Configuration,
-  moduleHandler: ModuleHandler,
+  staticRoutes: string[],
 ) {
+  const modules: Record<string, any> = {};
+  const decoder = new TextDecoder("utf-8");
+
+  const walkOptions = {
+    includeDirs: true,
+    exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
+    skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
+  };
+
   const root = path.join(config.appRoot, "src");
   const folders = Deno.readDirSync(root);
-  for await (const folder of folders) {
+  const { mode, assetDir } = config;
+  const pagesDir = config.assetPath("pages");
+
+  const { default: App } = await import(
+    path.join(pagesDir, "_app.tsx")
+  );
+
+  const { default: Document } = await import(
+    path.join(pagesDir, "_document.tsx")
+  );
+
+  // TODO: Transpile conrollers for loading
+  // const apiDir = assetPath("controllers");
+  // for await (const { path } of walk(apiDir, walkOptions)) {
+  //   console.log();
+  // }
+
+  /**
+   * Callback invoked during compliation. Handles rendering ssg routes and returning
+   * the html.
+   *
+   * @param path
+   */
+  const renderSSGModule = async (path: string): Promise<string | undefined> => {
     if (
-      !["pages", "components"].includes(folder.name) &&
-      folder.isDirectory
+      path.includes("_app") ||
+      path.includes("_document") ||
+      !path.includes("/pages")
     ) {
-      // TODO: Walk dirs, transpile & set into modules
+      return;
+    }
+
+    const hasStaticRoute = staticRoutes.filter((route) => path.includes(route));
+    if (hasStaticRoute.length === 0) return;
+
+    return await render(path, App, Document);
+  };
+
+  for await (const folder of folders) {
+    if (folder.isDirectory) {
+      const folderName = path.join(root, folder.name);
+
+      for await (
+        const { path: pathname } of walk(folderName, walkOptions)
+      ) {
+        const data = await Deno.readFile(pathname);
+
+        modules[pathname] = decoder.decode(data);
+      }
     }
   }
+
+  const transpiledModules = await Deno.transpileOnly(modules);
+
+  for (const moduleKey of Object.keys(transpiledModules)) {
+    const key = moduleKey
+      .replace(`${assetDir}`, "")
+      .replace(/\.(jsx|mjs|tsx|js|ts?)/g, ".js");
+
+    const html = await renderSSGModule(moduleKey);
+    moduleHandler.modules[key] = {
+      module: transpiledModules[moduleKey].source,
+      html: html,
+    };
+
+    const sourceMap = transpiledModules[moduleKey].map;
+    if (sourceMap) {
+      moduleHandler.modules[`${key}.map`] = {
+        module: sourceMap,
+      };
+    }
+  }
+
+  console.log(moduleHandler.modules);
 }
 
 export async function render(

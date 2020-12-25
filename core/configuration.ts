@@ -114,8 +114,7 @@ export class Configuration {
   get buildDir() {
     return path.join(
       this.appRoot,
-      ".tails",
-      this.mode + "." + this.buildTarget,
+      ".tails/src",
     );
   }
 

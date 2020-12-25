@@ -2,6 +2,7 @@ import { existsDirSync } from "./fs.ts";
 import log from "./logger/logger.ts";
 import { path } from "./std.ts";
 import { version } from "./version.ts";
+import util from "./core/utils.ts";
 
 const commands = {
   "init": "Create a new application",
@@ -33,10 +34,10 @@ Options:
 `;
 
 async function main() {
-  // parse deno args
   const args: Array<string> = [];
   const argOptions: Record<string, string | boolean> = {};
 
+  // parse deno args
   for (let i = 0; i < Deno.args.length; i++) {
     const arg = Deno.args[i];
 
@@ -99,11 +100,11 @@ async function main() {
   //   }
   // }
 
-  // // sets log level
-  // const l = argOptions.L || argOptions["log-level"];
-  // if (util.isNEString(l)) {
-  //   log.setLevel(l);
-  // }
+  // sets log level
+  const logLevel = argOptions.L || argOptions["log-level"];
+  if (util.isNEString(logLevel)) {
+    log.setLevel(logLevel);
+  }
 
   // if (!hasCommand && !args[0]) {
   //   const walkOptions = {

@@ -1,4 +1,9 @@
-import { compile, compileApplication, render } from "../compiler/compiler.ts";
+import {
+  compile,
+  compileApplication,
+  render,
+  transpileApplication,
+} from "../compiler/compiler.ts";
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
@@ -150,7 +155,7 @@ export class ModuleHandler {
   }
 
   private async compile(staticRoutes: string[]): Promise<void> {
-    await compileApplication(
+    await transpileApplication(
       this,
       this.config,
       staticRoutes,

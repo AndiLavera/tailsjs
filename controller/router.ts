@@ -5,7 +5,7 @@ import { path } from "../std.ts";
 
 interface RouteData {
   path: string;
-  module?: new () => Controller;
+  module?: string;
   page?: string;
   method?: string;
   ssg?: boolean;
@@ -84,19 +84,19 @@ export abstract class Router {
    *
    * @param module
    */
-  _fetchController(module: new () => Controller) {
-    if (this._instantiatedControllers[String(module)]) {
-      return this._instantiatedControllers[String(module)];
-    }
+  // _fetchController(module: string) {
+  //   if (this._instantiatedControllers[String(module)]) {
+  //     return this._instantiatedControllers[String(module)];
+  //   }
 
-    const controller = new module();
-    this._instantiatedControllers[String(module)] = controller;
-    return controller;
-  }
+  //   const controller = new module();
+  //   this._instantiatedControllers[String(module)] = controller;
+  //   return controller;
+  // }
 
   connect({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {
@@ -115,7 +115,7 @@ export abstract class Router {
 
   delete({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {
@@ -165,7 +165,7 @@ export abstract class Router {
 
   head({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {
@@ -184,7 +184,7 @@ export abstract class Router {
 
   options({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {
@@ -203,7 +203,7 @@ export abstract class Router {
 
   patch({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {
@@ -222,7 +222,7 @@ export abstract class Router {
 
   post({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {
@@ -241,7 +241,7 @@ export abstract class Router {
 
   put({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {
@@ -260,7 +260,7 @@ export abstract class Router {
 
   trace({ path, module, page, method }: {
     path: string;
-    module?: new () => Controller;
+    module?: string;
     page?: string;
     method?: string;
   }): void {

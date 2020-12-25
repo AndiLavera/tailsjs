@@ -8,6 +8,7 @@ import {
   Router as ServerRouter,
 } from "../deps.ts";
 import { Modules, Route } from "../types.ts";
+import log from "../logger/logger.ts";
 
 async function importComponent(path: string) {
   return (await import(path)).default;
@@ -27,13 +28,13 @@ export async function setHTMLRoutes(
     throw new Error("_app or _document could not be loaded");
   }
 
-  console.log("HTML ROUTES:\n");
+  log.debug("HTML ROUTES:");
 
   for await (const path of Object.keys(routes)) {
     const route = routes[path];
 
-    console.log(`Route: ${path}`);
-    console.log(`Page: ${assetPath(`pages/${route.page}`)}`);
+    log.debug(`  Route: ${path}`);
+    log.debug(`  Page: ${assetPath(`pages/${route.page}`)}`);
     const Component = await importComponent(
       assetPath(`pages/${route.page}`),
     );
@@ -41,7 +42,7 @@ export async function setHTMLRoutes(
     let props: Record<string, any> = {};
 
     if (route.module) {
-      let { controller, method } = webRouter.fetchController(route);
+      let { controller, method } = await webRouter.fetchController(route);
       props = controller[method]();
     }
 
