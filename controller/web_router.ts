@@ -122,7 +122,7 @@ export class WebRouter {
     log.debug("API Routes:");
     for await (const path of Object.keys(routes)) {
       // await this.setAPIRoute(path, routes[path], router);
-      console.debug(`  /api${path}`);
+      log.debug(`  /api${path}`);
       router.get(`/api${path}`);
     }
   }

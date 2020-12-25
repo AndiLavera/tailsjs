@@ -1,9 +1,4 @@
-import {
-  compile,
-  compileApplication,
-  render,
-  transpileApplication,
-} from "../compiler/compiler.ts";
+import { render, transpileApplication } from "../compiler/compiler.ts";
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
@@ -79,9 +74,6 @@ export class ModuleHandler {
     return Object.keys(this.modules);
   }
 
-  // Watch fs
-  // compile page/component
-  // update
   async watch(staticRoutes: string[]) {
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
     log.info("Start watching code changes...");
@@ -243,39 +235,43 @@ export class ModuleHandler {
     if (html) await ensureTextFile(`${path}.html`, html);
   }
 
-  // TODO: Move into compiler
+  // TODO: Move into compiler?
   private async recompile(filePath: string, staticRoutes: string[]) {
-    // await compile(
-    //   path,
-    //   this,
-    //   this.config.assetDir,
-    //   async (path) => {
-    //     await console.log("rendering html");
-    //     return undefined;
-    //   },
-    // );
-    const [diagnostics, bundle] = await Deno.compile(filePath);
+    const modules: Record<string, any> = {};
+    const decoder = new TextDecoder("utf-8");
+    const data = await Deno.readFile(filePath);
 
-    if (diagnostics) {
-      console.log(diagnostics);
-      throw new Error(`Could not compile ${filePath}`);
+    const key = filePath
+      .replace(`${this.config.assetDir}`, "");
+
+    modules[key] = decoder.decode(data);
+
+    const transpiled = await Deno.transpileOnly(modules);
+
+    let html;
+    if (filePath.includes("/pages")) {
+      html = await this.renderHTML(filePath, staticRoutes);
     }
 
-    for await (const moduleKey of Object.keys(bundle)) {
-      const key = moduleKey
-        .replace(`file://${this.config.assetDir}`, "")
-        .replace(/\.(jsx|mjs|tsx?)/g, "");
+    const JSKey = key.replace(/\.(jsx|mjs|tsx|ts|js?)/g, ".js");
+    const sourceMap = transpiled[key].map;
 
-      let html;
-
-      if (moduleKey.includes(filePath) && !moduleKey.includes(".map")) {
-        html = await this.renderHTML(filePath, staticRoutes);
-      }
-
-      this.set(key, bundle[moduleKey], html);
-      this.rewriteImportPath(key);
-      this.writeModule(key);
+    this.set(
+      JSKey,
+      transpiled[key].source,
+      html,
+    );
+    if (sourceMap) {
+      this.set(
+        `${JSKey}.map`,
+        sourceMap,
+      );
     }
+
+    this.rewriteImportPath(JSKey);
+    this.rewriteImportPath(`${JSKey}.map`);
+    await this.writeModule(JSKey);
+    await this.writeModule(`${JSKey}.map`);
   }
 
   private async renderHTML(filePath: string, staticRoutes: string[]) {
@@ -299,8 +295,10 @@ export class ModuleHandler {
       path.join(pagesDir, "_document.tsx")
     );
 
+    // The `Math.random()` is to get around Deno's caching system
+    // See: https://github.com/denoland/deno/issues/6946
     return await render(
-      filePath,
+      `${filePath}?version=${Math.random() + Math.random()}`,
       App,
       Document,
     );

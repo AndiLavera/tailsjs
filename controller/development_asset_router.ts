@@ -33,13 +33,11 @@ export class DevelopmentAssetRouter {
       paths.push(staticFilePath.replace(publicDir, ""));
     }
 
-    // console.log("DEVELOPMENT JS ASSET ROUTES:\n");
+    log.debug("JS Asset Routes:");
     Object.keys(modules).forEach((key) => {
       paths.push(key.replace("/pages", ""));
-      // console.log(key.replace("/pages", ""));
+      log.debug(`  ${key.replace("/pages", "")}`);
     });
-
-    // console.log("\n");
 
     this.serverRouter.use(async (ctx, next) => {
       const { pathname } = ctx.request.url;
