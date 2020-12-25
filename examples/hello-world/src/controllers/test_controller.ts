@@ -8,6 +8,6 @@ export default class extends Controller {
   create() {
     console.log("HIIIIT");
     console.log("create");
-    return { version: "0.1.0" };
+    return { version: "0.2.0" };
   }
 }

@@ -127,14 +127,12 @@ export class WebRouter {
     }
   }
 
-  // TODO: Duplicate of DevelopmentWebRouter#fetchController
   async fetchController(route: Route) {
     if (route.module) {
-      // TODO: Transpile controllers & load js file from .tails
       const controllerPath = path.join(
         this.config.appRoot,
-        "src/controllers",
-        `${route.module}.ts`,
+        ".tails/src/controllers",
+        `${route.module}.js?version=${Math.random() + Math.random()}`,
       );
 
       const { default: klass } = await import(controllerPath);

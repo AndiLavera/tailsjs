@@ -6,7 +6,7 @@ const Home = ({ version }: { version: string }) => {
 
   return (
     <div className="pure-g pure-u">
-      <h2>My DenoReact App - Version: {version}</h2>
+      <h2>My DenoReact App - Persion: {version}</h2>
       <button className="pure-button" onClick={() => setCount(count + 1)}>
         Add a 🦕 in your garden!
       </button>

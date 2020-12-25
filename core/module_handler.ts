@@ -4,8 +4,7 @@ import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
-import { generateHTML } from "../utils/setHTMLRoutes.tsx";
-import { reImportPath, reModuleExt } from "./utils.ts";
+import { reDoubleQuotes, reHttp, reImportPath, reModuleExt } from "./utils.ts";
 import log from "../logger/logger.ts";
 
 interface ManifestModule {
@@ -193,8 +192,13 @@ export class ModuleHandler {
     const matched = module.match(reImportPath) || [];
 
     matched.forEach((path) => {
-      const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
-      module = module.replace(path, alteredPath);
+      const importURL = path.match(reDoubleQuotes);
+
+      if (importURL && importURL[0] && !importURL[0].match(reHttp)) {
+        console.log(importURL[0]);
+        const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
+        module = module.replace(path, alteredPath);
+      }
     });
 
     this.modules[key].module = module;
@@ -208,6 +212,7 @@ export class ModuleHandler {
     await this.writeManifest();
 
     if (this.config.mode === "production") {
+      // TODO:
       // await this.writeHTML();
       // Copy files to /dist
     }
