@@ -1,8 +1,4 @@
 import { Context } from "./deps.ts";
-import { ProductionAssetRouter } from "./controller/production_asset_router.ts";
-import { DevelopmentAssetRouter } from "./controller/development_asset_router.ts";
-
-export type AssetRouter = ProductionAssetRouter | DevelopmentAssetRouter;
 
 type HTTPMethod =
   | "CONNECT"

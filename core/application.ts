@@ -5,8 +5,6 @@ import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
 import { ModuleHandler } from "./module_handler.ts";
-import { ProductionAssetRouter } from "../controller/production_asset_router.ts";
-// import { ProductionWebRouter } from "../controller/web_router.ts";
 
 export class Application {
   readonly config: Configuration;
@@ -27,7 +25,10 @@ export class Application {
     this.reload = reload;
     this.config = new Configuration(appDir, mode, building);
     this.moduleHandler = new ModuleHandler(this.config);
-    this.routeHandler = this.fetchRouteHandler();
+    this.routeHandler = new RouteHandler(
+      this.config,
+      this.moduleHandler,
+    );
   }
 
   get buildDir() {
@@ -128,16 +129,5 @@ export class Application {
     if (this.config.isDev) {
       // this._watch();
     }
-  }
-
-  fetchRouteHandler(): RouteHandler {
-    if (this.mode === "development") {
-      return new RouteHandler(this.config, this.moduleHandler);
-    }
-
-    return new RouteHandler(
-      this.config,
-      this.moduleHandler,
-    );
   }
 }

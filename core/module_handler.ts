@@ -199,7 +199,6 @@ export class ModuleHandler {
       const importURL = path.match(reDoubleQuotes);
 
       if (importURL && importURL[0] && !importURL[0].match(reHttp)) {
-        console.log(importURL[0]);
         const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
         module = module.replace(path, alteredPath);
       }
@@ -315,7 +314,6 @@ export class ModuleHandler {
 
   private async reloadModule(routeHandler: RouteHandler, pathname: string) {
     const filePath = pathname.replace(this.config.srcDir, "");
-    console.log(filePath);
 
     if (filePath.includes("/controllers")) {
       for await (const route of routeHandler.routes.api.routes) {
