@@ -5,8 +5,6 @@ import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
 import { ModuleHandler } from "./module_handler.ts";
-import { ProductionAssetRouter } from "../controller/production_asset_router.ts";
-// import { ProductionWebRouter } from "../controller/web_router.ts";
 
 export class Application {
   readonly config: Configuration;
@@ -27,7 +25,10 @@ export class Application {
     this.reload = reload;
     this.config = new Configuration(appDir, mode, building);
     this.moduleHandler = new ModuleHandler(this.config);
-    this.routeHandler = this.fetchRouteHandler();
+    this.routeHandler = new RouteHandler(
+      this.config,
+      this.moduleHandler,
+    );
   }
 
   get buildDir() {
@@ -57,7 +58,7 @@ export class Application {
     await this.routeHandler.init();
 
     const compilationTime = performance.now();
-    const staticRoutes = this.routeHandler._allStaticRoutes;
+    const staticRoutes = this.routeHandler._staticRoutes;
 
     await this.moduleHandler.build(staticRoutes);
     log.info(
@@ -70,7 +71,7 @@ export class Application {
       `Project loaded in ${Math.round(performance.now() - startTime)}ms`,
     );
 
-    this.moduleHandler.watch(staticRoutes);
+    this.moduleHandler.watch(this.routeHandler, staticRoutes);
   }
 
   /**
@@ -86,7 +87,7 @@ export class Application {
     await this.moduleHandler.init({ building: true });
     await this.routeHandler.init();
 
-    await this.moduleHandler.build(this.routeHandler._allStaticRoutes);
+    await this.moduleHandler.build(this.routeHandler._staticRoutes);
 
     log.info(
       "Project built in " + Math.round(performance.now() - startTime) + "ms",
@@ -128,17 +129,5 @@ export class Application {
     if (this.config.isDev) {
       // this._watch();
     }
-  }
-
-  fetchRouteHandler(): RouteHandler {
-    if (this.mode === "development") {
-      return new RouteHandler(this.config, this.moduleHandler);
-    }
-
-    return new RouteHandler(
-      this.config,
-      this.moduleHandler,
-      new ProductionAssetRouter(),
-    );
   }
 }

@@ -4,8 +4,6 @@ import log from "../logger/logger.ts";
 import { path } from "../std.ts";
 import { Plugin, SSROptions } from "../types.ts";
 import util, { reLocaleID } from "./utils.ts";
-import { Router } from "../controller/router.ts";
-import FakeRouter from "../controller/fake_router.ts";
 
 /**
 * Config for Tails.js application. Handles loading & processing
@@ -37,8 +35,6 @@ export class Configuration {
 
   __file?: string;
 
-  router: Router;
-
   mainJSPath: string;
 
   isBuilding: boolean;
@@ -68,8 +64,6 @@ export class Configuration {
     this.mainJSPath = "/main.js";
     this.defaultLocale = "en";
     this.env = {};
-    // TODO: Remove
-    this.router = new FakeRouter();
     this.locales = [];
     this.buildTarget = mode === "development" ? "es2018" : "es2015";
     this.sourceMap = false;
@@ -114,8 +108,7 @@ export class Configuration {
   get buildDir() {
     return path.join(
       this.appRoot,
-      ".tails",
-      this.mode + "." + this.buildTarget,
+      ".tails/src",
     );
   }
 

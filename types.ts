@@ -1,40 +1,49 @@
 import { Context } from "./deps.ts";
-import Controller from "./controller/controller.ts";
-import { ProductionAssetRouter } from "./controller/production_asset_router.ts";
-import { DevelopmentAssetRouter } from "./controller/development_asset_router.ts";
 
-export type AssetRouter = ProductionAssetRouter | DevelopmentAssetRouter;
-
-export interface Route {
-  module?: new () => Controller;
-  method?: string;
-  page?: string;
-  ssg?: boolean;
-}
-
-export interface Paths {
-  [key: string]: Record<string, Route>;
-  get: Record<string, Route>;
-  post: Record<string, Route>;
-  put: Record<string, Route>;
-  patch: Record<string, Route>;
-  delete: Record<string, Route>;
-  head: Record<string, Route>;
-  connect: Record<string, Route>;
-  options: Record<string, Route>;
-  trace: Record<string, Route>;
-}
+type HTTPMethod =
+  | "CONNECT"
+  | "DELETE"
+  | "GET"
+  | "HEAD"
+  | "OPTIONS"
+  | "PATCH"
+  | "POST"
+  | "PUT"
+  | "TRACE";
 
 export type Middleware = Array<
   (ctx: Context, next: () => Promise<void>) => Promise<void>
 >;
 
-export interface Routes {
-  [key: string]: {
-    middleware: Middleware;
-    paths: Paths;
-  };
+export interface WebRoute {
+  page: string;
+  ssg?: boolean;
+  path: string;
+  controller?: string;
+  method?: string;
 }
+
+export interface WebRoutes {
+  middleware: Middleware;
+  routes: WebRoute[];
+}
+
+export interface APIRoute {
+  method: string;
+  controller: string;
+  httpMethod: HTTPMethod;
+  path: string;
+}
+
+export interface APIRoutes {
+  middleware: Middleware;
+  routes: APIRoute[];
+}
+
+export type Routes = {
+  api: APIRoutes;
+  web: WebRoutes;
+};
 
 // TODO: any
 export interface Modules {

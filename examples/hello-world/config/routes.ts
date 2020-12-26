@@ -1,44 +1,32 @@
-import { TestController } from "../src/controllers/test_controller.ts";
-import { logger, Router } from "../../../mod.ts";
+import { Routes } from "../../../types.ts";
 
-export default class extends Router {
-  drawRoutes() {
-    this.pipeline("api", () => {
-      return [
-        logger,
-      ];
-    });
-
-    this.pipeline("web", () => {
-      return [
-        logger,
-      ];
-    });
-
-    this.routes("api", () => {
-      this.get({
-        path: "/create",
-        module: TestController,
+export const routes: Routes = {
+  api: {
+    middleware: [],
+    routes: [
+      {
+        controller: "test_controller",
         method: "create",
-      });
-    });
+        httpMethod: "GET",
+        path: "/create",
+      },
+    ],
+  },
 
-    this.routes("web", () => {
-      this.get(
-        {
-          path: "/",
-          page: "index.tsx",
-        },
-      );
-      this.get(
-        {
-          path: "/about",
-          page: "about.tsx",
-          module: TestController,
-          method: "show",
-          ssg: false,
-        },
-      );
-    });
-  }
-}
+  web: {
+    middleware: [],
+    routes: [
+      {
+        page: "index",
+        ssg: true,
+        path: "/",
+        controller: "test_controller",
+        method: "show",
+      },
+      {
+        page: "about",
+        path: "/about",
+      },
+    ],
+  },
+};

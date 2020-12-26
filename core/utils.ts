@@ -6,7 +6,7 @@ const REACT_FORWARD_REF_TYPE = symbolFor
 const REACT_MEMO_TYPE = symbolFor ? Symbol.for("react.memo") : 0xead3;
 
 export const hashShort = 9;
-export const reHttp = /^https?:\/\//i;
+export const reHttp = /https?:\/\//i;
 export const reModuleExt = /\.(js|jsx|mjs|ts|tsx)$/i;
 export const reStyleModuleExt = /\.(css|less)$/i;
 export const reMDExt = /\.(md|markdown)$/i;
@@ -14,6 +14,7 @@ export const reLocaleID = /^[a-z]{2}(-[a-zA-Z0-9]+)?$/;
 export const reHashJs = new RegExp(`\\.[0-9a-fx]{${hashShort}}\\.js$`, "i");
 export const reImportPath =
   /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
+export const reDoubleQuotes = /"([^\\"]|\\\\|\\")*"/;
 
 export const KB = 1024;
 export const MB = KB ** 2;
@@ -87,6 +88,7 @@ export default {
       const { protocol } = new URL(url);
       return protocol === "https:" || protocol === "http:";
     } catch (error) {
+      console.log(error);
       return false;
     }
   },

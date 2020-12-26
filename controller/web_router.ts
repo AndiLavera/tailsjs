@@ -1,133 +1,77 @@
 import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
-import { Router as ServerRouter } from "../deps.ts";
-import { walk } from "../std.ts";
-import { Middleware, Paths, Route } from "../types.ts";
-import { setHTMLRoutes } from "../utils/setHTMLRoutes.tsx";
-import { Router } from "./router.ts";
+import { Context, Router as OakRouter } from "../deps.ts";
+import { Middleware, WebRoute, WebRoutes } from "../types.ts";
+import { fetchHtml, generateHTML } from "../utils/setHTMLRoutes.tsx";
+import { WebModules } from "./route_handler.ts";
+import { setMiddleware, setStaticMiddleware } from "./utils.ts";
 
 export class WebRouter {
+  readonly router: OakRouter;
   private readonly config: Configuration;
   private readonly moduleHandler: ModuleHandler;
-  router?: Router;
 
   constructor(config: Configuration, moduleHandler: ModuleHandler) {
     this.config = config;
     this.moduleHandler = moduleHandler;
+    this.router = new OakRouter();
   }
 
-  async setRoutes(
-    router: Router,
-    serverRouters: ServerRouter[],
-  ): Promise<void> {
-    this.router = router;
+  setRoutes(webRoutes: WebRoutes, webModules: WebModules) {
+    setStaticMiddleware(this.router);
+    setMiddleware(webRoutes.middleware, this.router);
 
-    const pipelines = router._pipelines;
+    const App = this.moduleHandler.appComponent;
+    const Document = this.moduleHandler.documentComponent;
 
-    for await (const key of Object.keys(pipelines)) {
-      const pipeline = pipelines[key];
-      const router = new ServerRouter();
-
-      this.setMiddleware(pipeline.middleware, router);
-      await this.setStaticMiddleware(router);
-
-      this._setRoutes(pipeline.paths, router, key);
-      serverRouters.push(router);
+    if (!App || !Document) {
+      throw new Error("_app or _document could not be loaded");
     }
-  }
 
-  private setMiddleware(middlewares: Middleware, router: ServerRouter): void {
-    middlewares
-      .forEach((middleware) => router.use(middleware));
-  }
+    webRoutes.routes.forEach((route) => {
+      const { method } = route;
 
-  async setStaticMiddleware(router: ServerRouter): Promise<void> {
-    for await (
-      const { path } of walk("middleware", { exts: [".ts", ".js"] })
-    ) {
-      const module = await import("../" + path);
-      if (module.default) {
-        router.use(module.default);
-      }
-    }
-  }
+      this.router.get(route.path, (context: Context) => {
+        const webModule = webModules[route.path];
+        let props: any;
 
-  // TODO: Implement other http methods
-  // TODO: Too many arguments
-  private setRoute(
-    routes: Record<string, Route>,
-    router: ServerRouter,
-    httpMethod: string,
-    pipeline: string,
-  ): void {
-    switch (httpMethod) {
-      case "get":
-        if (pipeline === "web") {
-          setHTMLRoutes(
-            this,
-            this.moduleHandler,
-            routes,
-            router,
-            this.config.assetPath.bind(this.config),
-          );
+        if (webModule.controller && method) {
+          props = new webModule.controller()[method]();
         }
 
-        if (pipeline === "api") {
-          this.setAPIRoutes(
-            routes,
-            router,
-          );
+        const body = route.ssg
+          ? () => fetchHtml(route.page, this.moduleHandler.modules)
+          : () => generateHTML(App, Document, webModule.page, props);
+
+        let html;
+        try {
+          html = body();
+        } catch (error) {
+          console.log(error);
         }
 
-        break;
-    }
-  }
-
-  private _setRoutes(
-    paths: Paths,
-    router: ServerRouter,
-    pipeline: string,
-  ): void {
-    Object.keys(paths)
-      .forEach((httpMethod) => {
-        const routes = paths[httpMethod];
-        this.setRoute(routes, router, httpMethod, pipeline);
+        context.response.type = "text/html";
+        context.response.body = html;
       });
-  }
+    });
 
-  private setAPIRoutes(
-    routes: Record<string, Route>,
-    router: ServerRouter,
-  ): void {
-    Object.keys(routes)
-      .forEach((path) => {
-        this.setAPIRoute(path, routes[path], router);
-      });
-  }
+    // apiRoutes.routes.forEach((route) => {
+    //   const { controller, method, httpMethod, path } = route;
 
-  private setAPIRoute(path: string, route: Route, router: ServerRouter) {
-    const { controller, method } = this.fetchController(route);
-    router.get(`/api${path}`, controller[method]);
-  }
+    //   switch (httpMethod) {
+    //     case "GET":
+    //       // TODO: Set params and other important info
+    //       this.router.get(path, (context: Context) => {
+    //         const module = apiModules[path];
+    //         const controller = new module();
 
-  // TODO: Duplicate of DevelopmentWebRouter#fetchController
-  fetchController(route: Route) {
-    if (route.module) {
-      // const controller = new route.module();
-      const controller = (this.router as Router)._fetchController(route.module);
-      const method = route.method || "";
-
-      if (!controller[method]) {
-        throw new Error(
-          `No method ${method} found for controller ${controller}`,
-        );
-      }
-
-      return { controller, method };
-    }
-
-    throw new Error(
-      `Route module could not be found. ${route}`,
-    );
+    //         context.response.type = "application/json";
+    //         context.response.body = controller[method]();
+    //       });
+    //       break;
+    //     case "POST":
+    //       break;
+    //   }
+    // });
   }
 }

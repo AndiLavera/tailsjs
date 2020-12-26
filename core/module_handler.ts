@@ -1,12 +1,12 @@
-import { compile, compileApplication, render } from "../compiler/compiler.ts";
+import { render, transpileApplication } from "../compiler/compiler.ts";
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
-import { generateHTML } from "../utils/setHTMLRoutes.tsx";
-import { reImportPath, reModuleExt } from "./utils.ts";
+import { reDoubleQuotes, reHttp, reImportPath, reModuleExt } from "./utils.ts";
 import log from "../logger/logger.ts";
+import { RouteHandler } from "../controller/route_handler.ts";
 
 interface ManifestModule {
   path: string;
@@ -74,26 +74,26 @@ export class ModuleHandler {
     return Object.keys(this.modules);
   }
 
-  // Watch fs
-  // compile page/component
-  // update
-  async watch(staticRoutes: string[]) {
+  async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
     log.info("Start watching code changes...");
 
+    // TODO: Fix iterating twice per save
     for await (const event of watch) {
       if (event.kind === "access") continue;
 
       log.info(`Event kind: ${event.kind}`);
       for (const path of event.paths) {
         const startTime = performance.now();
+        const fileName = path.split("/").slice(-1)[0];
         log.info(
-          `Processing ${path.split("/").slice(-1)[0]}`,
+          `Processing ${fileName}`,
         );
         // Check if file was deleted
         if (!existsFile(path)) continue;
 
         await this.recompile(path, staticRoutes);
+        await this.reloadModule(routeHandler, path);
 
         log.info(
           `Processing completed in ${
@@ -150,7 +150,7 @@ export class ModuleHandler {
   }
 
   private async compile(staticRoutes: string[]): Promise<void> {
-    await compileApplication(
+    await transpileApplication(
       this,
       this.config,
       staticRoutes,
@@ -196,8 +196,12 @@ export class ModuleHandler {
     const matched = module.match(reImportPath) || [];
 
     matched.forEach((path) => {
-      const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
-      module = module.replace(path, alteredPath);
+      const importURL = path.match(reDoubleQuotes);
+
+      if (importURL && importURL[0] && !importURL[0].match(reHttp)) {
+        const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
+        module = module.replace(path, alteredPath);
+      }
     });
 
     this.modules[key].module = module;
@@ -211,6 +215,7 @@ export class ModuleHandler {
     await this.writeManifest();
 
     if (this.config.mode === "production") {
+      // TODO:
       // await this.writeHTML();
       // Copy files to /dist
     }
@@ -238,39 +243,43 @@ export class ModuleHandler {
     if (html) await ensureTextFile(`${path}.html`, html);
   }
 
-  // TODO: Move into compiler
+  // TODO: Move into compiler?
   private async recompile(filePath: string, staticRoutes: string[]) {
-    // await compile(
-    //   path,
-    //   this,
-    //   this.config.assetDir,
-    //   async (path) => {
-    //     await console.log("rendering html");
-    //     return undefined;
-    //   },
-    // );
-    const [diagnostics, bundle] = await Deno.compile(filePath);
+    const modules: Record<string, any> = {};
+    const decoder = new TextDecoder("utf-8");
+    const data = await Deno.readFile(filePath);
 
-    if (diagnostics) {
-      console.log(diagnostics);
-      throw new Error(`Could not compile ${filePath}`);
+    const key = filePath
+      .replace(`${this.config.assetDir}`, "");
+
+    modules[key] = decoder.decode(data);
+
+    const transpiled = await Deno.transpileOnly(modules);
+
+    let html;
+    if (filePath.includes("/pages")) {
+      html = await this.renderHTML(filePath, staticRoutes);
     }
 
-    for await (const moduleKey of Object.keys(bundle)) {
-      const key = moduleKey
-        .replace(`file://${this.config.assetDir}`, "")
-        .replace(/\.(jsx|mjs|tsx?)/g, "");
+    const JSKey = key.replace(/\.(jsx|mjs|tsx|ts|js?)/g, ".js");
+    const sourceMap = transpiled[key].map;
 
-      let html;
-
-      if (moduleKey.includes(filePath) && !moduleKey.includes(".map")) {
-        html = await this.renderHTML(filePath, staticRoutes);
-      }
-
-      this.set(key, bundle[moduleKey], html);
-      this.rewriteImportPath(key);
-      this.writeModule(key);
+    this.set(
+      JSKey,
+      transpiled[key].source,
+      html,
+    );
+    if (sourceMap) {
+      this.set(
+        `${JSKey}.map`,
+        sourceMap,
+      );
     }
+
+    this.rewriteImportPath(JSKey);
+    this.rewriteImportPath(`${JSKey}.map`);
+    await this.writeModule(JSKey);
+    await this.writeModule(`${JSKey}.map`);
   }
 
   private async renderHTML(filePath: string, staticRoutes: string[]) {
@@ -294,10 +303,40 @@ export class ModuleHandler {
       path.join(pagesDir, "_document.tsx")
     );
 
+    // The `Math.random()` is to get around Deno's caching system
+    // See: https://github.com/denoland/deno/issues/6946
     return await render(
-      filePath,
+      `${filePath}?version=${Math.random() + Math.random()}`,
       App,
       Document,
     );
+  }
+
+  private async reloadModule(routeHandler: RouteHandler, pathname: string) {
+    const filePath = pathname.replace(this.config.srcDir, "");
+
+    if (filePath.includes("/controllers")) {
+      for await (const route of routeHandler.routes.api.routes) {
+        if (filePath.includes(route.controller)) {
+          routeHandler.loadAPIModule(route);
+        }
+      }
+
+      for await (const route of routeHandler.routes.web.routes) {
+        const { controller } = route;
+        if (controller && filePath.includes(controller)) {
+          routeHandler.loadWebModule(route);
+        }
+      }
+    }
+
+    if (filePath.includes("/pages")) {
+      for await (const route of routeHandler.routes.web.routes) {
+        const { controller } = route;
+        if (controller && filePath.includes(controller)) {
+          routeHandler.loadWebModule(route);
+        }
+      }
+    }
   }
 }
