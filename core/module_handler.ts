@@ -4,7 +4,7 @@ import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
-import { reDoubleQuotes, reHttp, reImportPath, reModuleExt } from "./utils.ts";
+import { reDoubleQuotes, reHttp, reImportPath } from "./utils.ts";
 import log from "../logger/logger.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
 

@@ -1,10 +1,7 @@
 import { path, walk } from "../std.ts";
-import { Modules } from "../types.ts";
-import { ensureTextFile } from "../fs.ts";
-import { reModuleExt } from "../core/utils.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Configuration } from "../core/configuration.ts";
-import { generateHTML } from "../utils/setHTMLRoutes.tsx";
+import { generateHTML } from "../utils/generateHTML.tsx";
 import { ComponentType } from "../deps.ts";
 
 export async function transpileApplication(

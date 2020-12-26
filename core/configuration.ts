@@ -1,6 +1,5 @@
 import { existsFileSync } from "../fs.ts";
 import log from "../logger/logger.ts";
-// import { Routing } from "./routing.ts";
 import { path } from "../std.ts";
 import { Plugin, SSROptions } from "../types.ts";
 import util, { reLocaleID } from "./utils.ts";

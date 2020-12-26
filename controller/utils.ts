@@ -1,4 +1,3 @@
-import { walk } from "../std.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Middleware } from "../types.ts";
 import logger from "../middleware/logger.ts";

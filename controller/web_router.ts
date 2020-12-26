@@ -1,8 +1,9 @@
 import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Context, Router as OakRouter } from "../deps.ts";
-import { Middleware, WebRoute, WebRoutes } from "../types.ts";
-import { fetchHtml, generateHTML } from "../utils/setHTMLRoutes.tsx";
+import { WebRoutes } from "../types.ts";
+import { generateHTML } from "../utils/generateHTML.tsx";
+import { fetchHtml } from "../utils/fetchHTML.ts";
 import { WebModules } from "./route_handler.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
 
@@ -54,24 +55,5 @@ export class WebRouter {
         context.response.body = html;
       });
     });
-
-    // apiRoutes.routes.forEach((route) => {
-    //   const { controller, method, httpMethod, path } = route;
-
-    //   switch (httpMethod) {
-    //     case "GET":
-    //       // TODO: Set params and other important info
-    //       this.router.get(path, (context: Context) => {
-    //         const module = apiModules[path];
-    //         const controller = new module();
-
-    //         context.response.type = "application/json";
-    //         context.response.body = controller[method]();
-    //       });
-    //       break;
-    //     case "POST":
-    //       break;
-    //   }
-    // });
   }
 }
