@@ -5,8 +5,9 @@ export default class extends Controller {
     console.log("show api hit");
     return { method: "show" };
   }
+
   create() {
     console.log("create api hit");
-    return { version: "0.3.0" };
+    return { version: "0.1.0" };
   }
 }

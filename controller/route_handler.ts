@@ -1,10 +1,10 @@
 import { ComponentType, Router as ServerRouter } from "../deps.ts";
 import { Configuration } from "../core/configuration.ts";
 import { path } from "../std.ts";
-import { APIRoute, AssetRouter, Routes, WebRoute } from "../types.ts";
+import { APIRoute, Routes, WebRoute } from "../types.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
-import { DevelopmentAssetRouter } from "./development_asset_router.ts";
 import APIRouter from "./api_router.ts";
+import AssetRouter from "./asset_router.ts";
 import Controller from "./controller.ts";
 import { WebRouter } from "./web_router.ts";
 import { dynamicImport } from "../utils/dynamicImport.ts";
@@ -36,7 +36,6 @@ export class RouteHandler {
   constructor(
     config: Configuration,
     moduleHandler: ModuleHandler,
-    assetRouter: AssetRouter = new DevelopmentAssetRouter(),
   ) {
     this.apiModules = {};
     this.webModules = {};
@@ -48,8 +47,8 @@ export class RouteHandler {
 
     this.config = config;
     this.moduleHandler = moduleHandler;
-    this.assetRouter = assetRouter;
 
+    this.assetRouter = new AssetRouter(config, moduleHandler);
     this.apiRouter = new APIRouter(config, moduleHandler);
     this.webRouter = new WebRouter(config, moduleHandler);
 
@@ -93,20 +92,11 @@ export class RouteHandler {
     await this.loadModules();
     this.apiRouter.setRoutes(this.routes.api, this.apiModules);
     this.webRouter.setRoutes(this.routes.web, this.webModules);
+    await this.assetRouter.setRoutes();
 
-    // await this.webRouter.setRoutes(
-    //   this.routes,
-    //   this.serverRouters,
-    // );
-    // // await this.setUserRoutes();
-    // await this.assetRouter.setRoutes(
-    //   this.moduleHandler,
-    //   this.config,
-    // );
-
-    // this.serverRouters.push(this.assetRouter.serverRouter);
     this.serverRouters.push(this.apiRouter.router);
     this.serverRouters.push(this.webRouter.router);
+    this.serverRouters.push(this.assetRouter.router);
   }
 
   async loadAPIModule(route: APIRoute) {
@@ -168,8 +158,6 @@ export class RouteHandler {
     for await (const route of this.routes.web.routes) {
       await this.loadWebModule(route);
     }
-
-    console.log(this.webModules);
   }
 
   private async loadAPIModules() {

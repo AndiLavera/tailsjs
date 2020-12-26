@@ -314,21 +314,31 @@ export class ModuleHandler {
   }
 
   private async reloadModule(routeHandler: RouteHandler, pathname: string) {
-    for await (const route of routeHandler.routes.api.routes) {
-      if (pathname.includes(route.controller)) {
-        routeHandler.loadAPIModule(route);
+    const filePath = pathname.replace(this.config.srcDir, "");
+    console.log(filePath);
+
+    if (filePath.includes("/controllers")) {
+      for await (const route of routeHandler.routes.api.routes) {
+        if (filePath.includes(route.controller)) {
+          routeHandler.loadAPIModule(route);
+        }
+      }
+
+      for await (const route of routeHandler.routes.web.routes) {
+        const { controller } = route;
+        if (controller && filePath.includes(controller)) {
+          routeHandler.loadWebModule(route);
+        }
       }
     }
 
-    // TODO: Am here. Web routes are loading plain html, need to ensure
-    // current system design results in hot reloadable html routes
-    // for both SSG & SSR Routes.
-
-    // TODO: Once web router is ready for watching
-    // for await (const route of routeHandler.routes.web.routes) {
-    //   if (fileName.includes(route.controller)) {
-    //     routeHandler.loadAPIModule(route);
-    //   }
-    // }
+    if (filePath.includes("/pages")) {
+      for await (const route of routeHandler.routes.web.routes) {
+        const { controller } = route;
+        if (controller && filePath.includes(controller)) {
+          routeHandler.loadWebModule(route);
+        }
+      }
+    }
   }
 }

@@ -1,16 +1,12 @@
 import { walk } from "../std.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Middleware } from "../types.ts";
+import logger from "../middleware/logger.ts";
+import timer from "../middleware/timer.ts";
 
-export async function setStaticMiddleware(router: OakRouter): Promise<void> {
-  for await (
-    const { path } of walk("middleware", { exts: [".ts", ".js"] })
-  ) {
-    const module = await import("../" + path);
-    if (module.default) {
-      router.use(module.default);
-    }
-  }
+export function setStaticMiddleware(router: OakRouter): void {
+  router.use(logger);
+  router.use(timer);
 }
 
 export function setMiddleware(

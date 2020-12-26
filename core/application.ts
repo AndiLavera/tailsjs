@@ -138,7 +138,6 @@ export class Application {
     return new RouteHandler(
       this.config,
       this.moduleHandler,
-      new ProductionAssetRouter(),
     );
   }
 }
