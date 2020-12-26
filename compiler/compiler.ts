@@ -34,12 +34,6 @@ export async function transpileApplication(
     path.join(pagesDir, "_document.tsx")
   );
 
-  // TODO: Transpile conrollers for loading
-  // const apiDir = assetPath("controllers");
-  // for await (const { path } of walk(apiDir, walkOptions)) {
-  //   console.log();
-  // }
-
   /**
    * Callback invoked during compliation. Handles rendering ssg routes and returning
    * the html.

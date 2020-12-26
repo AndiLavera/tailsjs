@@ -7,7 +7,7 @@ import {
   renderToString,
   Router as ServerRouter,
 } from "../deps.ts";
-import { Modules, Route } from "../types.ts";
+import { Modules, WebRoute } from "../types.ts";
 import log from "../logger/logger.ts";
 
 async function importComponent(path: string) {
@@ -17,7 +17,7 @@ async function importComponent(path: string) {
 export async function setHTMLRoutes(
   webRouter: WebRouter,
   moduleHandler: ModuleHandler,
-  routes: Record<string, Route>,
+  routes: Record<string, WebRoute>,
   router: ServerRouter,
   assetPath: (asset: string) => string,
 ) {
@@ -41,9 +41,9 @@ export async function setHTMLRoutes(
 
     let props: Record<string, any> = {};
 
-    if (route.module) {
-      let { controller, method } = await webRouter.fetchController(route);
-      props = controller[method]();
+    if (route.controller) {
+      // let { controller, method } = await webRouter.fetchController(route);
+      // props = controller[method]();
     }
 
     const body = route.ssg
@@ -75,8 +75,12 @@ export function generateHTML(
 }
 
 // TODO: Should not be undefined
-function fetchHtml(page: string | undefined, modules: Modules) {
-  const cleanedPage = (page as any).replace(/\.(jsx|mjs|tsx?)/g, "");
+export function fetchHtml(page: string | undefined, modules: Modules) {
+  const cleanedPage = (page as string).replace(
+    /\.(jsx|mjs|tsx|ts|js?)/g,
+    "",
+  );
+
   return modules[
     `/pages/${cleanedPage}.js`
   ].html;

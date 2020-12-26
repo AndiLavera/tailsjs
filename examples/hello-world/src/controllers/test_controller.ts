@@ -2,12 +2,11 @@ import { Controller } from "https://denopkg.com/andrewc910/tailsjs/mod.ts";
 
 export default class extends Controller {
   show() {
-    return { version: "0.1.0" };
+    console.log("show api hit");
+    return { method: "show" };
   }
-
   create() {
-    console.log("HIIIIT");
-    console.log("create");
-    return { version: "0.2.0" };
+    console.log("create api hit");
+    return { version: "0.3.0" };
   }
 }

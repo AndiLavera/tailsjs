@@ -6,6 +6,7 @@ import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
 import { reDoubleQuotes, reHttp, reImportPath, reModuleExt } from "./utils.ts";
 import log from "../logger/logger.ts";
+import { RouteHandler } from "../controller/route_handler.ts";
 
 interface ManifestModule {
   path: string;
@@ -73,23 +74,26 @@ export class ModuleHandler {
     return Object.keys(this.modules);
   }
 
-  async watch(staticRoutes: string[]) {
+  async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
     log.info("Start watching code changes...");
 
+    // TODO: Fix iterating twice per save
     for await (const event of watch) {
       if (event.kind === "access") continue;
 
       log.info(`Event kind: ${event.kind}`);
       for (const path of event.paths) {
         const startTime = performance.now();
+        const fileName = path.split("/").slice(-1)[0];
         log.info(
-          `Processing ${path.split("/").slice(-1)[0]}`,
+          `Processing ${fileName}`,
         );
         // Check if file was deleted
         if (!existsFile(path)) continue;
 
         await this.recompile(path, staticRoutes);
+        await this.reloadModule(routeHandler, path);
 
         log.info(
           `Processing completed in ${
@@ -307,5 +311,24 @@ export class ModuleHandler {
       App,
       Document,
     );
+  }
+
+  private async reloadModule(routeHandler: RouteHandler, pathname: string) {
+    for await (const route of routeHandler.routes.api.routes) {
+      if (pathname.includes(route.controller)) {
+        routeHandler.loadAPIModule(route);
+      }
+    }
+
+    // TODO: Am here. Web routes are loading plain html, need to ensure
+    // current system design results in hot reloadable html routes
+    // for both SSG & SSR Routes.
+
+    // TODO: Once web router is ready for watching
+    // for await (const route of routeHandler.routes.web.routes) {
+    //   if (fileName.includes(route.controller)) {
+    //     routeHandler.loadAPIModule(route);
+    //   }
+    // }
   }
 }
