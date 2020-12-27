@@ -84,21 +84,20 @@ export class ModuleHandler {
     for await (const event of watch) {
       if (event.kind === "access") continue;
 
-      log.info(`Event kind: ${event.kind}`);
+      log.debug(`Event kind: ${event.kind}`);
       for (const path of event.paths) {
         const startTime = performance.now();
         const fileName = path.split("/").slice(-1)[0];
-        log.info(
+        log.debug(
           `Processing ${fileName}`,
         );
         // Check if file was deleted
         if (!existsFile(path)) continue;
 
         await this.recompile(path, staticRoutes);
-        // await this.reloadModule(routeHandler, path);
         await routeHandler.reloadModule(path);
 
-        log.info(
+        log.debug(
           `Processing completed in ${
             Math.round(performance.now() - startTime)
           }ms`,

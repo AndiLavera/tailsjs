@@ -174,8 +174,6 @@ export class RouteHandler {
           filePath.includes(controller) &&
           !importedModules[controller]
         ) {
-          console.log(importedModules);
-          console.log("importing web module");
           await this.loadWebModule(route);
         } else if (importedModules[`${controller}`]) {
           this.webModules[route.path].controller =
@@ -187,6 +185,7 @@ export class RouteHandler {
     if (filePath.includes("/pages")) {
       for await (const route of this.routes.web.routes) {
         const { controller } = route;
+
         if (controller && filePath.includes(controller)) {
           this.loadWebModule(route);
         }
