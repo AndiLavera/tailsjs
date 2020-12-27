@@ -5,6 +5,7 @@ import { Context } from "../deps.ts";
 import { path, walk } from "../std.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
+import { injectHMR } from "../hmr/injectHMR.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -20,6 +21,13 @@ export default class AssetRouter {
   async setRoutes() {
     const decoder = new TextDecoder("utf-8");
     const publicDir = path.join(this.config.appRoot, "public");
+    const data = await Deno.readFile("./hmr/hmr.ts");
+    const hmrContent = decoder.decode(data);
+
+    this.router.get("/_hmr.ts", (context: Context) => {
+      context.response.type = "application/javascript";
+      context.response.body = hmrContent;
+    });
 
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
@@ -50,7 +58,12 @@ export default class AssetRouter {
 
       this.router.get(route, (context: Context) => {
         context.response.type = getContentType(route);
-        context.response.body = this.moduleHandler.modules[moduleKey].module;
+
+        let module = this.moduleHandler.modules[moduleKey].module;
+        if (this.config.mode === "development") {
+          module = injectHMR(moduleKey, module);
+        }
+        context.response.body = module;
       });
     });
   }

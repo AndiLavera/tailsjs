@@ -99,6 +99,7 @@ export class Configuration {
   get mainJS(): string {
     // TODO: Just move bootstrap code here
     return `
+      require('_hmr.ts')
       import { bootstrap } from "./bootstrap.ts";
       bootstrap()
       `;
