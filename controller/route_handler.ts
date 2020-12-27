@@ -10,6 +10,7 @@ import { WebRouter } from "./web_router.ts";
 import { dynamicImport } from "../utils/dynamicImport.ts";
 
 interface WebModule {
+  // deno-lint-ignore no-explicit-any
   page: ComponentType<any>;
   controller: new () => Controller;
 }
@@ -19,19 +20,19 @@ export type WebModules = Record<string, WebModule>;
 
 export class RouteHandler {
   routes: Routes;
-  apiModules: APIModules;
-  webModules: WebModules;
 
+  readonly apiModules: APIModules;
+  readonly webModules: WebModules;
   readonly serverRouters: ServerRouter[];
   readonly routesPath: string;
+  readonly controllersDir: string;
+  readonly pagesDir: string;
 
   private readonly config: Configuration;
   private readonly assetRouter: AssetRouter;
   private readonly webRouter: WebRouter;
   private readonly apiRouter: APIRouter;
   private readonly moduleHandler: ModuleHandler;
-  controllersDir: string;
-  pagesDir: string;
 
   constructor(
     config: Configuration,
@@ -39,10 +40,10 @@ export class RouteHandler {
   ) {
     this.apiModules = {};
     this.webModules = {};
+    this.serverRouters = [];
+
     this.controllersDir = path.join(config.appRoot, ".tails/src/controllers");
     this.pagesDir = path.join(config.appRoot, ".tails/src/pages");
-
-    this.serverRouters = [];
     this.routesPath = path.join(config.appRoot, "config/routes.ts");
 
     this.config = config;
@@ -146,6 +147,50 @@ export class RouteHandler {
       throw new Error(
         `Could not load api route module: ${route.controller}. Path: ${pagePath}`,
       );
+    }
+  }
+
+  async reloadModule(pathname: string) {
+    const filePath = pathname.replace(this.config.srcDir, "");
+    const importedModules: Record<string, any> = {};
+
+    if (filePath.includes("/controllers")) {
+      for await (const route of this.routes.api.routes) {
+        if (
+          filePath.includes(route.controller) && !importedModules[route.path]
+        ) {
+          await this.loadAPIModule(route);
+          importedModules[route.controller] = this.apiModules[route.path];
+        } else if (importedModules[route.path]) {
+          this.apiModules[route.path] = importedModules[route.controller];
+        }
+      }
+
+      for await (const route of this.routes.web.routes) {
+        const { controller } = route;
+
+        if (
+          controller &&
+          filePath.includes(controller) &&
+          !importedModules[controller]
+        ) {
+          console.log(importedModules);
+          console.log("importing web module");
+          await this.loadWebModule(route);
+        } else if (importedModules[`${controller}`]) {
+          this.webModules[route.path].controller =
+            importedModules[`${controller}`];
+        }
+      }
+    }
+
+    if (filePath.includes("/pages")) {
+      for await (const route of this.routes.web.routes) {
+        const { controller } = route;
+        if (controller && filePath.includes(controller)) {
+          this.loadWebModule(route);
+        }
+      }
     }
   }
 

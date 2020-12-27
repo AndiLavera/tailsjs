@@ -34,6 +34,7 @@ export class WebRouter {
 
       this.router.get(route.path, (context: Context) => {
         const webModule = webModules[route.path];
+        // deno-lint-ignore no-explicit-any
         let props: any;
 
         if (webModule.controller && method) {

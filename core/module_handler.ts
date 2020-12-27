@@ -20,7 +20,9 @@ interface Manifest {
 
 export class ModuleHandler {
   bootstrap: string;
+  // deno-lint-ignore no-explicit-any
   appComponent?: ComponentType<any>;
+  // deno-lint-ignore no-explicit-any
   documentComponent?: ComponentType<any>;
 
   readonly modules: Modules;
@@ -93,7 +95,8 @@ export class ModuleHandler {
         if (!existsFile(path)) continue;
 
         await this.recompile(path, staticRoutes);
-        await this.reloadModule(routeHandler, path);
+        // await this.reloadModule(routeHandler, path);
+        await routeHandler.reloadModule(path);
 
         log.info(
           `Processing completed in ${
@@ -114,6 +117,7 @@ export class ModuleHandler {
     this.bootstrap = await this.loadBootstrap();
   }
 
+  // deno-lint-ignore no-explicit-any
   private async loadAppComponent(): Promise<ComponentType<any>> {
     try {
       const { path } = this.manifest["/pages/_app.js"];
@@ -126,6 +130,7 @@ export class ModuleHandler {
     }
   }
 
+  // deno-lint-ignore no-explicit-any
   private async loadDocumentComponent(): Promise<ComponentType<any>> {
     try {
       const { path } = this.manifest["/pages/_document.js"];
@@ -245,7 +250,7 @@ export class ModuleHandler {
 
   // TODO: Move into compiler?
   private async recompile(filePath: string, staticRoutes: string[]) {
-    const modules: Record<string, any> = {};
+    const modules: Record<string, string> = {};
     const decoder = new TextDecoder("utf-8");
     const data = await Deno.readFile(filePath);
 
@@ -310,33 +315,5 @@ export class ModuleHandler {
       App,
       Document,
     );
-  }
-
-  private async reloadModule(routeHandler: RouteHandler, pathname: string) {
-    const filePath = pathname.replace(this.config.srcDir, "");
-
-    if (filePath.includes("/controllers")) {
-      for await (const route of routeHandler.routes.api.routes) {
-        if (filePath.includes(route.controller)) {
-          routeHandler.loadAPIModule(route);
-        }
-      }
-
-      for await (const route of routeHandler.routes.web.routes) {
-        const { controller } = route;
-        if (controller && filePath.includes(controller)) {
-          routeHandler.loadWebModule(route);
-        }
-      }
-    }
-
-    if (filePath.includes("/pages")) {
-      for await (const route of routeHandler.routes.web.routes) {
-        const { controller } = route;
-        if (controller && filePath.includes(controller)) {
-          routeHandler.loadWebModule(route);
-        }
-      }
-    }
   }
 }
