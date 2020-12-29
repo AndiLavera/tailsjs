@@ -109,7 +109,8 @@ export class RouteHandler {
     try {
       const controller = (await dynamicImport(importPath)).default;
       this.apiModules[route.path] = controller;
-    } catch {
+    } catch (error) {
+      console.log(error);
       throw new Error(
         `Could not load api route module: ${route.controller}. Path: ${importPath}`,
       );

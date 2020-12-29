@@ -1,4 +1,4 @@
-import React, { useState } from "https://esm.sh/react";
+import React, { useState } from "https://esm.sh/react@17.0.1?dev";
 import Logo from "../components/logo.tsx";
 
 export default function Home() {
@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <div className="page">
       <p className="logo"><Logo /></p>
-      <h1>Welcome to use <strong>Aleph.js</strong>!</h1>
+      <h1>Welcome to use <strong>Tails.js</strong>!</h1>
       <p className="links">
         <a href="https://alephjs.org" target="_blank">Website</a>
         <span>&middot;</span>

@@ -6,6 +6,8 @@ import { path, walk } from "../std.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
+import { acceptWebSocket } from "https://deno.land/std@0.82.0/ws/mod.ts";
+import util from "../core/utils.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -21,13 +23,60 @@ export default class AssetRouter {
   async setRoutes() {
     const decoder = new TextDecoder("utf-8");
     const publicDir = path.join(this.config.appRoot, "public");
-    const data = await Deno.readFile("./hmr/hmr.ts");
-    const hmrContent = decoder.decode(data);
+    const watcher = this.moduleHandler.addEventListener();
+
+    /**
+     * HMR
+     */
+    const hmrData = await Deno.readFile("./hmr/hmr.ts");
+    const eventData = await Deno.readFile("./hmr/events.ts");
+
+    const hmrContent = await Deno.transpileOnly({
+      "hmr.ts": decoder.decode(hmrData),
+      "events.ts": decoder.decode(eventData),
+    });
+    this.router.get("/_hmr", async (ctx) => {
+      const socket = await ctx.upgrade();
+
+      for await (const event of socket) {
+        if (typeof event === "string") {
+          console.log("ws:Text", event);
+
+          const data = JSON.parse(event);
+          if (data.type === "hotAccept" && util.isNEString(data.id)) {
+            const mod = this.moduleHandler.modules[data.id];
+
+            if (mod) {
+              watcher.on(
+                "modify-" + data.id,
+                async () => {
+                  await socket.send(
+                    JSON.stringify({
+                      type: "update",
+                      moduleId: data.id,
+                      updateUrl: data.id.replace("/pages", ""),
+                    }),
+                  );
+                },
+              );
+            }
+          }
+        }
+      }
+    });
 
     this.router.get("/_hmr.ts", (context: Context) => {
       context.response.type = "application/javascript";
-      context.response.body = hmrContent;
+      context.response.body = hmrContent["hmr.ts"].source;
     });
+
+    this.router.get("/events.ts", (context: Context) => {
+      context.response.type = "application/javascript";
+      context.response.body = hmrContent["events.ts"].source;
+    });
+    /**
+     * End of HMR
+     */
 
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
@@ -42,7 +91,7 @@ export default class AssetRouter {
     for await (const { path: staticFilePath } of walk(publicDir)) {
       if (publicDir === staticFilePath) continue;
 
-      const file = this.fetchAsset(staticFilePath, decoder);
+      const file = await this.fetchAsset(staticFilePath, decoder);
       const route = staticFilePath.replace(publicDir, "");
 
       this.router.get(route, (context: Context) => {

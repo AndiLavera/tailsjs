@@ -1,10 +1,24 @@
-import runtime from "https://esm.sh/react-refresh@0.8.3/runtime";
+import runtime from "https://esm.sh/react-refresh@0.8.3/runtime?dev";
 import events from "./events.ts";
-import util, { hashShort } from "../core/utils.ts";
 
 interface Callback {
   // deno-lint-ignore no-explicit-any
   (...args: any[]): void;
+}
+
+const hashShort = 9;
+
+function debounce<T extends Function>(callback: T, delay: number): T {
+  let timer: number | null = null;
+  return ((...args: any[]) => {
+    if (timer != null) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      timer = null;
+      callback(...args);
+    }, delay);
+  }) as any;
 }
 
 // react-refresh
@@ -15,7 +29,7 @@ Object.assign(window, {
   // deno-lint-ignore no-explicit-any
   $RefreshSig$: () => (type: any) => type,
 });
-export const performReactRefresh = util.debounce(
+export const performReactRefresh = debounce(
   runtime.performReactRefresh,
   30,
 );

@@ -1,4 +1,4 @@
-import React from "https://esm.sh/react";
+import React from "https://esm.sh/react?dev";
 import { garden } from "../components/garden.ts";
 
 const Home = ({ version }: { version: string }) => {

@@ -7,6 +7,7 @@ import { Configuration } from "./configuration.ts";
 import { reDoubleQuotes, reHttp, reImportPath } from "./utils.ts";
 import log from "../logger/logger.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
+import { EventEmitter } from "../hmr/events.ts";
 
 interface ManifestModule {
   path: string;
@@ -28,11 +29,13 @@ export class ModuleHandler {
   readonly modules: Modules;
   private manifest: Manifest;
   private readonly config: Configuration;
+  private readonly eventListeners: EventEmitter[];
 
   constructor(config: Configuration) {
     this.config = config;
     this.modules = {};
     this.manifest = {};
+    this.eventListeners = [];
     this.bootstrap = 'throw new Error("No Bootstrap Content")';
   }
 
@@ -76,6 +79,20 @@ export class ModuleHandler {
     return Object.keys(this.modules);
   }
 
+  addEventListener() {
+    const e = new EventEmitter();
+    this.eventListeners.push(e);
+    return e;
+  }
+
+  removeEventListener(e: EventEmitter) {
+    e.removeAllListeners();
+    const index = this.eventListeners.indexOf(e);
+    if (index > -1) {
+      this.eventListeners.splice(index, 1);
+    }
+  }
+
   async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
     log.info("Start watching code changes...");
@@ -94,8 +111,20 @@ export class ModuleHandler {
         // Check if file was deleted
         if (!existsFile(path)) continue;
 
+        // TODO: Possibly make this 2 event listeners
         await this.recompile(path, staticRoutes);
         await routeHandler.reloadModule(path);
+
+        const cleanPath = path
+          .replace(`${this.config.assetDir}`, "")
+          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
+
+        this.eventListeners.forEach((eventListener) => {
+          eventListener.emit(
+            `${event.kind}-${cleanPath}`,
+            cleanPath,
+          );
+        });
 
         log.debug(
           `Processing completed in ${

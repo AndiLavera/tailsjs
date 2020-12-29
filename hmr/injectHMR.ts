@@ -1,4 +1,8 @@
-import { reImportPath } from "../core/utils.ts";
+import {
+  reExportDefault,
+  reExportDefaultFunction,
+  reImportPath,
+} from "../core/utils.ts";
 
 function removeImports(jsFile: string) {
   const imports = jsFile.match(reImportPath) || [];
@@ -11,14 +15,36 @@ function removeImports(jsFile: string) {
   return { jsContent, imports };
 }
 
+function buildHMRPath(id: string) {
+  // console.log(id.split("/").slice(1, -1));
+  const splitID = id.split("/").slice(1, -1);
+
+  let pathname = splitID.length === 0 ? "./" : "";
+  splitID.forEach((dir) => {
+    // if (dir !== "pages") {
+    //   pathname += "../";
+    // }
+    pathname += "../";
+  });
+
+  pathname += "_hmr.ts";
+
+  // console.log(id);
+  // console.log(pathname);
+  return pathname;
+}
+
 export function injectHMR(id: string, jsFile: string): string {
-  const lines = [
-    `import { createHotContext, RefreshRuntime, performReactRefresh } from "./_hmr.ts";`,
+  let lines = [
+    `import { createHotContext, RefreshRuntime, performReactRefresh } from "${
+      buildHMRPath(id)
+    }";`,
     `import.meta.hot = createHotContext(${JSON.stringify(id)});`,
   ];
 
   const { jsContent, imports } = removeImports(jsFile);
-  lines.concat(imports);
+
+  lines = lines.concat(imports);
 
   const reactRefresh = id.endsWith(".js") ||
     id.endsWith(".md") ||
@@ -30,9 +56,11 @@ export function injectHMR(id: string, jsFile: string): string {
       `const prevRefreshReg = window.$RefreshReg$;`,
       `const prevRefreshSig = window.$RefreshSig$;`,
       `Object.assign(window, {`,
-      `    $RefreshReg$: (type, id) => RefreshRuntime.register(type, ${
-        JSON.stringify(id)
-      } + " " + id),`,
+      `    $RefreshReg$: (type, id) => {
+        console.log(type)
+        console.log(${JSON.stringify(id)} ${id})
+        RefreshRuntime.register(type, ${JSON.stringify(id)} + " " + id)
+      },`,
       `    $RefreshSig$: RefreshRuntime.createSignatureFunctionForTransform`,
       `});`,
     );
@@ -43,6 +71,11 @@ export function injectHMR(id: string, jsFile: string): string {
   lines.push("");
 
   if (reactRefresh) {
+    let matchedExport = jsContent.match(reExportDefaultFunction);
+    matchedExport ||= jsContent.match(reExportDefault);
+
+    console.log(matchedExport);
+    // `$RefreshReg$(_a, "App");`;
     lines.push(
       "window.$RefreshReg$ = prevRefreshReg;",
       "window.$RefreshSig$ = prevRefreshSig;",
