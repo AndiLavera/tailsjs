@@ -2,7 +2,7 @@ import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Context } from "../deps.ts";
-import { isWebSocketCloseEvent, path, walk } from "../std.ts";
+import { path, walk } from "../std.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
@@ -12,21 +12,27 @@ export default class AssetRouter {
   readonly router: OakRouter;
   private readonly config: Configuration;
   private readonly moduleHandler: ModuleHandler;
+  private readonly decoder: TextDecoder;
 
   constructor(config: Configuration, moduleHandler: ModuleHandler) {
     this.config = config;
     this.moduleHandler = moduleHandler;
+    this.decoder = new TextDecoder("utf-8");
     this.router = new OakRouter();
   }
 
   async setRoutes() {
-    const decoder = new TextDecoder("utf-8");
-    const publicDir = path.join(this.config.appRoot, "public");
-
     if (this.config.mode === "development") {
-      await this.handleHMR(decoder);
+      this.handleHMR();
+      await this.setHMRAssetRoutes();
     }
 
+    this.setDefaultRoutes();
+    await this.setPublicRoutes();
+    this.setModuleRoutes();
+  }
+
+  private setDefaultRoutes() {
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
       context.response.body = this.moduleHandler.bootstrap;
@@ -36,11 +42,19 @@ export default class AssetRouter {
       context.response.type = "application/javascript";
       context.response.body = this.config.mainJS;
     });
+  }
+
+  /**
+   * Handles walking the users `/public` dir
+   * and adding each asset to the router.
+   */
+  private async setPublicRoutes() {
+    const publicDir = path.join(this.config.appRoot, "public");
 
     for await (const { path: staticFilePath } of walk(publicDir)) {
       if (publicDir === staticFilePath) continue;
 
-      const file = await this.fetchAsset(staticFilePath, decoder);
+      const file = await this.fetchAsset(staticFilePath);
       const route = staticFilePath.replace(publicDir, "");
 
       this.router.get(route, (context: Context) => {
@@ -48,7 +62,9 @@ export default class AssetRouter {
         context.response.body = file;
       });
     }
+  }
 
+  private setModuleRoutes() {
     log.debug("JS Asset Routes:");
     Object.keys(this.moduleHandler.modules).forEach((moduleKey) => {
       const route = moduleKey.replace("/pages", "");
@@ -70,15 +86,7 @@ export default class AssetRouter {
     });
   }
 
-  private async fetchAsset(
-    pathName: string,
-    decoder: TextDecoder,
-  ): Promise<string> {
-    const data = await Deno.readFile(pathName);
-    return decoder.decode(data);
-  }
-
-  private async handleHMR(decoder: TextDecoder) {
+  private handleHMR() {
     this.router.get("/_hmr", async (ctx) => {
       const watcher = this.moduleHandler.addEventListener();
       const socket = await ctx.upgrade();
@@ -110,13 +118,15 @@ export default class AssetRouter {
         }
       }
     });
+  }
 
-    const hmrData = await Deno.readFile("./hmr/hmr.ts");
-    const eventData = await Deno.readFile("./hmr/events.ts");
+  private async setHMRAssetRoutes() {
+    const hmrData = await this.fetchAsset("./hmr/hmr.ts");
+    const eventData = await this.fetchAsset("./hmr/events.ts");
 
     const hmrContent = await Deno.transpileOnly({
-      "hmr.ts": decoder.decode(hmrData),
-      "events.ts": decoder.decode(eventData),
+      "hmr.ts": hmrData,
+      "events.ts": eventData,
     });
 
     this.router.get("/_hmr.ts", (context: Context) => {
@@ -128,5 +138,10 @@ export default class AssetRouter {
       context.response.type = "application/javascript";
       context.response.body = hmrContent["events.ts"].source;
     });
+  }
+
+  private async fetchAsset(pathName: string): Promise<string> {
+    const data = await Deno.readFile(pathName);
+    return this.decoder.decode(data);
   }
 }
