@@ -8,8 +8,10 @@ interface Callback {
 
 const hashShort = 9;
 
+// deno-lint-ignore ban-types
 function debounce<T extends Function>(callback: T, delay: number): T {
   let timer: number | null = null;
+  // deno-lint-ignore no-explicit-any
   return ((...args: any[]) => {
     if (timer != null) {
       clearTimeout(timer);
@@ -18,6 +20,7 @@ function debounce<T extends Function>(callback: T, delay: number): T {
       timer = null;
       callback(...args);
     }, delay);
+    // deno-lint-ignore no-explicit-any
   }) as any;
 }
 
