@@ -1,8 +1,8 @@
-import React from "https://esm.sh/react?dev";
+import React, { useState } from "https://esm.sh/react@17.0.1";
 import { garden } from "../components/garden.ts";
 
-const Home = ({ version }: { version: string }) => {
-  const [count, setCount] = React.useState(0);
+const About = ({ version }: { version: string }) => {
+  const [count, setCount] = useState(0);
 
   return (
     <div className="pure-g pure-u">
@@ -18,4 +18,4 @@ const Home = ({ version }: { version: string }) => {
   );
 };
 
-export default Home;
+export default About;

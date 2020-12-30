@@ -1,7 +1,9 @@
 import {
+  reEsmUrl,
   reExportConst,
   reExportDefault,
   reExportDefaultFunction,
+  reHttp,
   reImportPath,
 } from "../core/utils.ts";
 import log from "../logger/logger.ts";
@@ -10,8 +12,31 @@ function removeImports(jsFile: string) {
   const imports = jsFile.match(reImportPath) || [];
 
   let jsContent = jsFile;
-  imports.forEach((imp) => {
+  imports.forEach((imp, idx) => {
     jsContent = jsContent.replace(imp, "");
+
+    let alteredPath;
+    if (
+      imp.match(reHttp) &&
+      imp.match(reEsmUrl) &&
+      !imp.includes("?dev")
+    ) {
+      if (imp.includes('";')) {
+        alteredPath = imp.replace('";', '?dev";');
+      }
+
+      if (imp.includes("';")) {
+        alteredPath = imp.replace("';", "?dev';");
+      }
+
+      if (imp.includes("`;")) {
+        alteredPath = imp.replace("`;", "?dev`;");
+      }
+    }
+
+    if (alteredPath) {
+      imports[idx] = alteredPath;
+    }
   });
 
   return { jsContent, imports };

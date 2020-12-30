@@ -2,7 +2,7 @@ import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Context } from "../deps.ts";
-import { path, walk } from "../std.ts";
+import { isWebSocketCloseEvent, path, walk } from "../std.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
@@ -79,9 +79,8 @@ export default class AssetRouter {
   }
 
   private async handleHMR(decoder: TextDecoder) {
-    const watcher = this.moduleHandler.addEventListener();
-
     this.router.get("/_hmr", async (ctx) => {
+      const watcher = this.moduleHandler.addEventListener();
       const socket = await ctx.upgrade();
 
       for await (const event of socket) {
@@ -93,18 +92,19 @@ export default class AssetRouter {
             const mod = this.moduleHandler.modules[data.id];
 
             if (mod) {
-              watcher.on(
-                "modify-" + data.id,
-                async () => {
-                  await socket.send(
-                    JSON.stringify({
-                      type: "update",
-                      moduleId: data.id,
-                      updateUrl: data.id.replace("/pages", ""),
-                    }),
-                  );
-                },
-              );
+              const callback = async () => {
+                if (socket.isClosed) return;
+
+                await socket.send(
+                  JSON.stringify({
+                    type: "update",
+                    moduleId: data.id,
+                    updateUrl: data.id.replace("/pages", ""),
+                  }),
+                );
+              };
+
+              watcher.on("modify-" + data.id, callback);
             }
           }
         }
