@@ -9,6 +9,7 @@ export async function transpileApplication(
   config: Configuration,
   staticRoutes: string[],
 ) {
+  // deno-lint-ignore no-explicit-any
   const modules: Record<string, any> = {};
   const decoder = new TextDecoder("utf-8");
 
@@ -90,7 +91,9 @@ export async function transpileApplication(
 
 export async function render(
   path: string,
+  // deno-lint-ignore no-explicit-any
   App: ComponentType<any>,
+  // deno-lint-ignore no-explicit-any
   Document: ComponentType<any>,
 ): Promise<string | undefined> {
   const { default: Component } = await import(path);

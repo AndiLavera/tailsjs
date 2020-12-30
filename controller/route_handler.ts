@@ -153,6 +153,7 @@ export class RouteHandler {
 
   async reloadModule(pathname: string) {
     const filePath = pathname.replace(this.config.srcDir, "");
+    // deno-lint-ignore no-explicit-any
     const importedModules: Record<string, any> = {};
 
     if (filePath.includes("/controllers")) {
