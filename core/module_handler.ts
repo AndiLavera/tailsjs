@@ -95,19 +95,21 @@ export class ModuleHandler {
 
   async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
+    let reloading = false;
     log.info("Start watching code changes...");
 
-    // TODO: Fix iterating twice per save
     for await (const event of watch) {
-      if (event.kind === "access") continue;
+      if (event.kind === "access" || reloading) continue;
 
       log.debug(`Event kind: ${event.kind}`);
+      if (event.kind !== "modify") continue;
+      reloading = true;
+
       for (const path of event.paths) {
         const startTime = performance.now();
         const fileName = path.split("/").slice(-1)[0];
-        log.debug(
-          `Processing ${fileName}`,
-        );
+
+        log.debug(`Processing ${fileName}`);
         // Check if file was deleted
         if (!existsFile(path)) continue;
 
@@ -132,6 +134,8 @@ export class ModuleHandler {
           }ms`,
         );
       }
+
+      setTimeout(() => (reloading = false), 500);
     }
   }
 

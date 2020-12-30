@@ -92,9 +92,11 @@ socket.addEventListener("open", () => {
   console.log("[HMR] listening for file changes...");
 });
 
-socket.addEventListener("close", () => {
-  location.reload();
-});
+// TODO: This is disabled because it breaks loading
+// any page except root
+// socket.addEventListener("close", () => {
+//   location.reload();
+// });
 
 socket.addEventListener("message", ({ data: rawData }: { data?: string }) => {
   if (rawData) {

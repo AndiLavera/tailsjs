@@ -1,8 +1,10 @@
 import {
+  reExportConst,
   reExportDefault,
   reExportDefaultFunction,
   reImportPath,
 } from "../core/utils.ts";
+import log from "../logger/logger.ts";
 
 function removeImports(jsFile: string) {
   const imports = jsFile.match(reImportPath) || [];
@@ -16,21 +18,14 @@ function removeImports(jsFile: string) {
 }
 
 function buildHMRPath(id: string) {
-  // console.log(id.split("/").slice(1, -1));
   const splitID = id.split("/").slice(1, -1);
 
   let pathname = splitID.length === 0 ? "./" : "";
-  splitID.forEach((dir) => {
-    // if (dir !== "pages") {
-    //   pathname += "../";
-    // }
+  splitID.forEach(() => {
     pathname += "../";
   });
 
   pathname += "_hmr.ts";
-
-  // console.log(id);
-  // console.log(pathname);
   return pathname;
 }
 
@@ -74,7 +69,9 @@ export function injectHMR(id: string, jsFile: string): string {
     // [ "export default function Logo", "Logo" ]
     // And that should be figured out
     let matchedExport = jsContent.match(reExportDefaultFunction);
-    matchedExport ||= jsContent.match(reExportDefault) as RegExpMatchArray;
+    matchedExport ||= jsContent.match(reExportDefault);
+    matchedExport ||= jsContent.match(reExportConst) as RegExpMatchArray;
+    log.debug(`injectHMR Matches: ${matchedExport}`);
 
     const matchedConst = matchedExport[matchedExport.length - 1];
 

@@ -6,7 +6,6 @@ import { path, walk } from "../std.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
-import { acceptWebSocket } from "https://deno.land/std@0.82.0/ws/mod.ts";
 import util from "../core/utils.ts";
 
 export default class AssetRouter {
@@ -23,60 +22,10 @@ export default class AssetRouter {
   async setRoutes() {
     const decoder = new TextDecoder("utf-8");
     const publicDir = path.join(this.config.appRoot, "public");
-    const watcher = this.moduleHandler.addEventListener();
 
-    /**
-     * HMR
-     */
-    const hmrData = await Deno.readFile("./hmr/hmr.ts");
-    const eventData = await Deno.readFile("./hmr/events.ts");
-
-    const hmrContent = await Deno.transpileOnly({
-      "hmr.ts": decoder.decode(hmrData),
-      "events.ts": decoder.decode(eventData),
-    });
-    this.router.get("/_hmr", async (ctx) => {
-      const socket = await ctx.upgrade();
-
-      for await (const event of socket) {
-        if (typeof event === "string") {
-          console.log("ws:Text", event);
-
-          const data = JSON.parse(event);
-          if (data.type === "hotAccept" && util.isNEString(data.id)) {
-            const mod = this.moduleHandler.modules[data.id];
-
-            if (mod) {
-              watcher.on(
-                "modify-" + data.id,
-                async () => {
-                  await socket.send(
-                    JSON.stringify({
-                      type: "update",
-                      moduleId: data.id,
-                      updateUrl: data.id.replace("/pages", ""),
-                    }),
-                  );
-                },
-              );
-            }
-          }
-        }
-      }
-    });
-
-    this.router.get("/_hmr.ts", (context: Context) => {
-      context.response.type = "application/javascript";
-      context.response.body = hmrContent["hmr.ts"].source;
-    });
-
-    this.router.get("/events.ts", (context: Context) => {
-      context.response.type = "application/javascript";
-      context.response.body = hmrContent["events.ts"].source;
-    });
-    /**
-     * End of HMR
-     */
+    if (this.config.mode === "development") {
+      await this.handleHMR(decoder);
+    }
 
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
@@ -106,13 +55,17 @@ export default class AssetRouter {
       log.debug(`  ${route}`);
 
       this.router.get(route, (context: Context) => {
-        context.response.type = getContentType(route);
+        try {
+          let module = this.moduleHandler.modules[moduleKey].module;
+          if (this.config.mode === "development") {
+            module = injectHMR(moduleKey, module);
+          }
 
-        let module = this.moduleHandler.modules[moduleKey].module;
-        if (this.config.mode === "development") {
-          module = injectHMR(moduleKey, module);
+          context.response.type = getContentType(route);
+          context.response.body = module;
+        } catch (error) {
+          log.error(error);
         }
-        context.response.body = module;
       });
     });
   }
@@ -123,5 +76,57 @@ export default class AssetRouter {
   ): Promise<string> {
     const data = await Deno.readFile(pathName);
     return decoder.decode(data);
+  }
+
+  private async handleHMR(decoder: TextDecoder) {
+    const watcher = this.moduleHandler.addEventListener();
+
+    this.router.get("/_hmr", async (ctx) => {
+      const socket = await ctx.upgrade();
+
+      for await (const event of socket) {
+        if (typeof event === "string") {
+          log.debug("WS", JSON.parse(event));
+
+          const data = JSON.parse(event);
+          if (data.type === "hotAccept" && util.isNEString(data.id)) {
+            const mod = this.moduleHandler.modules[data.id];
+
+            if (mod) {
+              watcher.on(
+                "modify-" + data.id,
+                async () => {
+                  await socket.send(
+                    JSON.stringify({
+                      type: "update",
+                      moduleId: data.id,
+                      updateUrl: data.id.replace("/pages", ""),
+                    }),
+                  );
+                },
+              );
+            }
+          }
+        }
+      }
+    });
+
+    const hmrData = await Deno.readFile("./hmr/hmr.ts");
+    const eventData = await Deno.readFile("./hmr/events.ts");
+
+    const hmrContent = await Deno.transpileOnly({
+      "hmr.ts": decoder.decode(hmrData),
+      "events.ts": decoder.decode(eventData),
+    });
+
+    this.router.get("/_hmr.ts", (context: Context) => {
+      context.response.type = "application/javascript";
+      context.response.body = hmrContent["hmr.ts"].source;
+    });
+
+    this.router.get("/events.ts", (context: Context) => {
+      context.response.type = "application/javascript";
+      context.response.body = hmrContent["events.ts"].source;
+    });
   }
 }

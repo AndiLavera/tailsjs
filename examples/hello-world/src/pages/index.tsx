@@ -3,7 +3,7 @@ import Logo from "../components/logo.tsx";
 
 function Home() {
   const [count, setCount] = useState(0);
-  const version = "0.3.0";
+  const version = "0.1.0";
 
   return (
     <div className="page">
@@ -26,7 +26,7 @@ function Home() {
         <button onClick={() => setCount((n) => n - 1)}>-</button>
         <button onClick={() => setCount((n) => n + 1)}>+</button>
       </p>
-      <p className="copyinfo">Built by Tails.js in Deno v{version}</p>
+      <p className="copyinfo">Built with Tails.js v{version}</p>
       <a href="/about">About</a>
     </div>
   );

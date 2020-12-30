@@ -17,6 +17,8 @@ export const reImportPath =
 export const reDoubleQuotes = /"([^\\"]|\\\\|\\")*"/;
 export const reExportDefaultFunction = /export default function (\w+)/;
 export const reExportDefault = /export default (\w+)/;
+export const reExportConst = /export const (\w+)/;
+export const reEsmUrl = /https?:\/\/esm.sh\//;
 
 export const KB = 1024;
 export const MB = KB ** 2;
