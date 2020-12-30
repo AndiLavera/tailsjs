@@ -4,9 +4,10 @@ import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
-import { reDoubleQuotes, reHttp, reImportPath } from "./utils.ts";
+import { reDoubleQuotes, reEsmUrl, reHttp, reImportPath } from "./utils.ts";
 import log from "../logger/logger.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
+import { EventEmitter } from "../hmr/events.ts";
 
 interface ManifestModule {
   path: string;
@@ -28,11 +29,13 @@ export class ModuleHandler {
   readonly modules: Modules;
   private manifest: Manifest;
   private readonly config: Configuration;
+  private readonly eventListeners: EventEmitter[];
 
   constructor(config: Configuration) {
     this.config = config;
     this.modules = {};
     this.manifest = {};
+    this.eventListeners = [];
     this.bootstrap = 'throw new Error("No Bootstrap Content")';
   }
 
@@ -76,26 +79,54 @@ export class ModuleHandler {
     return Object.keys(this.modules);
   }
 
+  addEventListener() {
+    const e = new EventEmitter();
+    this.eventListeners.push(e);
+    return e;
+  }
+
+  removeEventListener(e: EventEmitter) {
+    e.removeAllListeners();
+    const index = this.eventListeners.indexOf(e);
+    if (index > -1) {
+      this.eventListeners.splice(index, 1);
+    }
+  }
+
   async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
+    let reloading = false;
     log.info("Start watching code changes...");
 
-    // TODO: Fix iterating twice per save
     for await (const event of watch) {
-      if (event.kind === "access") continue;
+      if (event.kind === "access" || reloading) continue;
 
       log.debug(`Event kind: ${event.kind}`);
+      if (event.kind !== "modify") continue;
+      reloading = true;
+
       for (const path of event.paths) {
         const startTime = performance.now();
         const fileName = path.split("/").slice(-1)[0];
-        log.debug(
-          `Processing ${fileName}`,
-        );
+
+        log.debug(`Processing ${fileName}`);
         // Check if file was deleted
         if (!existsFile(path)) continue;
 
+        // TODO: Possibly make this 2 event listeners
         await this.recompile(path, staticRoutes);
         await routeHandler.reloadModule(path);
+
+        const cleanPath = path
+          .replace(`${this.config.assetDir}`, "")
+          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
+
+        this.eventListeners.forEach((eventListener) => {
+          eventListener.emit(
+            `${event.kind}-${cleanPath}`,
+            cleanPath,
+          );
+        });
 
         log.debug(
           `Processing completed in ${
@@ -103,6 +134,8 @@ export class ModuleHandler {
           }ms`,
         );
       }
+
+      setTimeout(() => (reloading = false), 500);
     }
   }
 
@@ -118,12 +151,13 @@ export class ModuleHandler {
 
   // deno-lint-ignore no-explicit-any
   private async loadAppComponent(): Promise<ComponentType<any>> {
-    try {
-      const { path } = this.manifest["/pages/_app.js"];
-      const { default: appComponent } = await import(path);
+    const { path } = this.manifest["/pages/_app.js"];
 
+    try {
+      const { default: appComponent } = await import(path);
       return appComponent;
-    } catch {
+    } catch (err) {
+      console.log(err);
       // TODO: path is undefined due to block level scoping
       throw new Error(`Cannot find pages/_app.js. Path tried: ${path}`);
     }
@@ -136,7 +170,8 @@ export class ModuleHandler {
       const { default: documentComponent } = await import(path);
 
       return documentComponent;
-    } catch {
+    } catch (err) {
+      console.log(err);
       throw new Error(`Cannot find pages/_document.js. Path tried: ${path}`);
     }
   }
@@ -200,10 +235,17 @@ export class ModuleHandler {
     const matched = module.match(reImportPath) || [];
 
     matched.forEach((path) => {
+      let alteredPath;
+      // TODO: Match remaining string types
+      // || path.match(reSingleQuotes) || path.match(reBackTicks)
       const importURL = path.match(reDoubleQuotes);
+      if (!importURL || !importURL[0]) return;
 
-      if (importURL && importURL[0] && !importURL[0].match(reHttp)) {
-        const alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
+      if (!importURL[0].match(reHttp)) {
+        alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
+      }
+
+      if (alteredPath) {
         module = module.replace(path, alteredPath);
       }
     });

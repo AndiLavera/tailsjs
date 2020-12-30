@@ -15,6 +15,10 @@ export const reHashJs = new RegExp(`\\.[0-9a-fx]{${hashShort}}\\.js$`, "i");
 export const reImportPath =
   /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
 export const reDoubleQuotes = /"([^\\"]|\\\\|\\")*"/;
+export const reExportDefaultFunction = /export default function (\w+)/;
+export const reExportDefault = /export default (\w+)/;
+export const reExportConst = /export const (\w+)/;
+export const reEsmUrl = /https?:\/\/esm.sh\//;
 
 export const KB = 1024;
 export const MB = KB ** 2;

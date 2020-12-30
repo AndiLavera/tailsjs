@@ -1,4 +1,4 @@
-import React from "https://esm.sh/react";
+import React from "https://esm.sh/react@17.0.1";
 
 export default function Document(
   { children, initialData = {} }: {
@@ -13,9 +13,10 @@ export default function Document(
           rel="stylesheet"
           href="https://unpkg.com/purecss@2.0.3/build/pure-min.css"
         />
+        <link rel="modulepreload" href="/_hmr.ts"></link>
         <link rel="modulepreload" href="/main.js"></link>
         <link rel="modulepreload" href="/bootstrap.ts"></link>
-        <link rel="modulepreload" href="/_app.tsx"></link>
+        <link rel="modulepreload" href="/_app.js"></link>
       </head>
       <body>
         <main id="app">
