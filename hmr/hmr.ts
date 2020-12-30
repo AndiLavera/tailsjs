@@ -93,7 +93,7 @@ socket.addEventListener("open", () => {
 });
 
 // TODO: This is disabled because it breaks loading
-// any page except root
+// any page except root.
 // socket.addEventListener("close", () => {
 //   location.reload();
 // });
