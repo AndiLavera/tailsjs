@@ -57,13 +57,12 @@ export function injectHMR(id: string, jsFile: string): string {
       `const prevRefreshSig = window.$RefreshSig$;`,
       `Object.assign(window, {`,
       `    $RefreshReg$: (type, id) => {
-        console.log(type)
-        console.log(${JSON.stringify(id)} ${id})
         RefreshRuntime.register(type, ${JSON.stringify(id)} + " " + id)
       },`,
       `    $RefreshSig$: RefreshRuntime.createSignatureFunctionForTransform`,
       `});`,
     );
+    lines.push("var _a;");
   }
 
   lines.push("");
@@ -71,11 +70,18 @@ export function injectHMR(id: string, jsFile: string): string {
   lines.push("");
 
   if (reactRefresh) {
+    // TODO: I have no idea why the matched result will be:
+    // [ "export default function Logo", "Logo" ]
+    // And that should be figured out
     let matchedExport = jsContent.match(reExportDefaultFunction);
-    matchedExport ||= jsContent.match(reExportDefault);
+    matchedExport ||= jsContent.match(reExportDefault) as RegExpMatchArray;
 
-    console.log(matchedExport);
-    // `$RefreshReg$(_a, "App");`;
+    const matchedConst = matchedExport[matchedExport.length - 1];
+
+    lines.push(`_a = ${matchedConst}`);
+    lines.push(`$RefreshReg$(_a, "${matchedConst}")`);
+    lines.push("");
+
     lines.push(
       "window.$RefreshReg$ = prevRefreshReg;",
       "window.$RefreshSig$ = prevRefreshSig;",

@@ -1,9 +1,9 @@
 import React, { useState } from "https://esm.sh/react@17.0.1?dev";
 import Logo from "../components/logo.tsx";
 
-export default function Home() {
+function Home() {
   const [count, setCount] = useState(0);
-  const version = "0.1.0";
+  const version = "0.3.0";
 
   return (
     <div className="page">
@@ -26,8 +26,10 @@ export default function Home() {
         <button onClick={() => setCount((n) => n - 1)}>-</button>
         <button onClick={() => setCount((n) => n + 1)}>+</button>
       </p>
-      <p className="copyinfo">Built by Aleph.js in Deno v{version}</p>
+      <p className="copyinfo">Built by Tails.js in Deno v{version}</p>
       <a href="/about">About</a>
     </div>
   );
 }
+
+export default Home;

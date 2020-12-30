@@ -1,6 +1,6 @@
+import "./_hmr.ts";
 import React from "https://esm.sh/react@17.0.1?dev";
 import { hydrate } from "https://esm.sh/react-dom@17.0.1?dev";
-import "./_hmr.ts";
 import App from "./_app.js";
 
 export async function bootstrap() {

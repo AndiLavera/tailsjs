@@ -15,7 +15,7 @@ export default function Document(
         />
         {/* <link rel="modulepreload" href="/_hmr.ts"></link> */}
         <link rel="modulepreload" href="/main.js"></link>
-        <link rel="modulepreload" href="/bootstrap.ts"></link>
+        {/* <link rel="modulepreload" href="/bootstrap.ts"></link> */}
         {/* <link rel="modulepreload" href="/_app.js"></link> */}
       </head>
       <body>
