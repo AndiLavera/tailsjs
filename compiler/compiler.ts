@@ -5,49 +5,49 @@ import { generateHTML } from "../utils/generateHTML.tsx";
 import { ComponentType } from "../deps.ts";
 import { handlePlugins } from "./plugins.ts";
 
-export async function transpileApplication(
-  moduleHandler: ModuleHandler,
-  config: Configuration,
-  staticRoutes: string[],
-) {
-  // deno-lint-ignore no-explicit-any
-  const modules: Record<string, any> = {};
-  const { assetDir } = config;
-  const pagesDir = config.assetPath("pages");
+// export async function transpileApplication(
+//   moduleHandler: ModuleHandler,
+//   config: Configuration,
+//   staticRoutes: string[],
+// ) {
+//   // deno-lint-ignore no-explicit-any
+//   const modules: Record<string, any> = {};
+//   const { assetDir } = config;
+//   const pagesDir = config.assetPath("pages");
 
-  const importMod = async (dir: string) => {
-    return await import(
-      path.join(pagesDir, dir)
-    );
-  };
+//   const importMod = async (dir: string) => {
+//     return await import(
+//       path.join(pagesDir, dir)
+//     );
+//   };
 
-  const { default: App } = await importMod("_app.tsx");
-  const { default: Document } = await importMod("_document.tsx");
+//   const { default: App } = await importMod("_app.tsx");
+//   const { default: Document } = await importMod("_document.tsx");
 
-  /**
-   * Callback invoked during compliation. Handles rendering ssg routes and returning
-   * the html.
-   *
-   * @param path
-   */
-  const renderSSGModule = async (path: string): Promise<string | undefined> => {
-    if (notRenderable(path)) return;
+//   /**
+//    * Callback invoked during compliation. Handles rendering ssg routes and returning
+//    * the html.
+//    *
+//    * @param path
+//    */
+//   const renderSSGModule = async (path: string): Promise<string | undefined> => {
+//     if (notRenderable(path)) return;
 
-    if (!isStatic(staticRoutes, path)) return;
+//     if (!isStatic(staticRoutes, path)) return;
 
-    return await render(path, App, Document);
-  };
+//     return await render(path, App, Document);
+//   };
 
-  await loadModules(config.srcDir, modules);
-  const transpiledModules = await Deno.transpileOnly(modules);
+//   await loadModules(config.srcDir, modules);
+//   const transpiledModules = await Deno.transpileOnly(modules);
 
-  await setModules(
-    transpiledModules,
-    moduleHandler,
-    assetDir,
-    renderSSGModule,
-  );
-}
+//   await setModules(
+//     transpiledModules,
+//     moduleHandler,
+//     assetDir,
+//     renderSSGModule,
+//   );
+// }
 
 export async function render(
   path: string,
@@ -125,29 +125,29 @@ async function walkSrc(
   }
 }
 
-async function setModules(
-  modules: Record<string, any>,
-  moduleHandler: ModuleHandler,
-  assetDir: string,
-  renderSSGModule: (key: string) => Promise<string | undefined>,
-) {
-  for await (const moduleKey of Object.keys(modules)) {
-    const key = cleanKey(moduleKey, assetDir);
+// async function setModules(
+//   modules: Record<string, any>,
+//   moduleHandler: ModuleHandler,
+//   assetDir: string,
+//   renderSSGModule: (key: string) => Promise<string | undefined>,
+// ) {
+//   for await (const moduleKey of Object.keys(modules)) {
+//     const key = cleanKey(moduleKey, assetDir);
 
-    const html = await renderSSGModule(moduleKey);
-    moduleHandler.modules[key] = {
-      module: modules[moduleKey].source,
-      html: html,
-    };
+//     const html = await renderSSGModule(moduleKey);
+//     moduleHandler.modules[key] = {
+//       module: modules[moduleKey].source,
+//       html: html,
+//     };
 
-    const sourceMap = modules[moduleKey].map;
-    if (sourceMap) {
-      moduleHandler.modules[`${key}.map`] = {
-        module: sourceMap,
-      };
-    }
-  }
-}
+//     const sourceMap = modules[moduleKey].map;
+//     if (sourceMap) {
+//       moduleHandler.modules[`${key}.map`] = {
+//         module: sourceMap,
+//       };
+//     }
+//   }
+// }
 
 async function loadJsModules(
   callback: (walkOptions: Record<string, any>) => Promise<void>,

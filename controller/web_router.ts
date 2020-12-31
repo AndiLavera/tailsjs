@@ -42,7 +42,7 @@ export class WebRouter {
         }
 
         const body = route.ssg
-          ? () => fetchHtml(route.page, this.moduleHandler.modules)
+          ? () => fetchHtml(route.page as string, this.moduleHandler.modules)
           : () => generateHTML(App, Document, webModule.page, props);
 
         let html;

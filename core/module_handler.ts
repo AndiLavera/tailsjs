@@ -1,13 +1,17 @@
-import { render, transpileApplication } from "../compiler/compiler.ts";
+import { render } from "../compiler/compiler.ts";
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
-import { Modules } from "../types.ts";
+// import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
 import { reDoubleQuotes, reEsmUrl, reHttp, reImportPath } from "./utils.ts";
 import log from "../logger/logger.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
 import { EventEmitter } from "../hmr/events.ts";
+import Module from "../modules/module.ts";
+import * as compiler from "../compiler/compiler2.ts";
+import utils from "../modules/utils.ts";
+import * as renderer from "../modules/renderer.ts";
 
 interface ManifestModule {
   path: string;
@@ -26,14 +30,14 @@ export class ModuleHandler {
   // deno-lint-ignore no-explicit-any
   documentComponent?: ComponentType<any>;
 
-  readonly modules: Modules;
+  readonly modules: Map<string, Module>;
   private manifest: Manifest;
   private readonly config: Configuration;
   private readonly eventListeners: EventEmitter[];
 
   constructor(config: Configuration) {
     this.config = config;
-    this.modules = {};
+    this.modules = new Map();
     this.manifest = {};
     this.eventListeners = [];
     this.bootstrap = 'throw new Error("No Bootstrap Content")';
@@ -49,17 +53,16 @@ export class ModuleHandler {
     // TODO: Make use of config.isBuilding
     if (this.config.mode === "production" && !options.building) {
       await this.loadManifest();
-      this.setModules();
+      this.setManifestModules();
       await this.setDefaultComponents();
       return;
     }
   }
 
   async build(staticRoutes: string[]) {
-    await this.compile(staticRoutes);
-    this.rewriteImportPaths();
+    const modules = await this.compile();
+    await this.setModules(modules, staticRoutes);
     await this.writeAll();
-
     await this.setDefaultComponents();
 
     if (this.config.mode === "production") {
@@ -67,16 +70,16 @@ export class ModuleHandler {
     }
   }
 
-  get(key: string): { module: string; html?: string | undefined } {
-    return this.modules[key];
+  get(key: string): Module | undefined {
+    return this.modules.get(key);
   }
 
-  set(key: string, module: string, html?: string): void {
-    this.modules[key] = { module, html };
+  set(key: string, module: Module): void {
+    this.modules.set(key, module);
   }
 
-  keys(): Array<string> {
-    return Object.keys(this.modules);
+  keys(): IterableIterator<string> {
+    return this.modules.keys();
   }
 
   addEventListener() {
@@ -94,17 +97,19 @@ export class ModuleHandler {
   }
 
   async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
+    log.info("Start watching code changes...");
+
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
     let reloading = false;
-    log.info("Start watching code changes...");
 
     for await (const event of watch) {
       if (event.kind === "access" || reloading) continue;
 
       log.debug(`Event kind: ${event.kind}`);
-      if (event.kind !== "modify") continue;
-      reloading = true;
 
+      if (event.kind !== "modify") continue;
+
+      reloading = true;
       for (const path of event.paths) {
         const startTime = performance.now();
         const fileName = path.split("/").slice(-1)[0];
@@ -139,61 +144,40 @@ export class ModuleHandler {
     }
   }
 
-  /**
-   * Loads App, Document & bootstrap.js. This MUST be called AFTER
-   * `writeAll` as loadXComponent expects the manifest to be built.
-   */
-  private async setDefaultComponents(): Promise<void> {
-    this.appComponent = await this.loadAppComponent();
-    this.documentComponent = await this.loadDocumentComponent();
-    this.bootstrap = await this.loadBootstrap();
-  }
+  private async compile(): Promise<Record<string, Deno.TranspileOnlyResult>> {
+    const walkOptions = {
+      includeDirs: true,
+      exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
+      skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
+    };
 
-  // deno-lint-ignore no-explicit-any
-  private async loadAppComponent(): Promise<ComponentType<any>> {
-    const { path } = this.manifest["/pages/_app.js"];
-
-    try {
-      const { default: appComponent } = await import(path);
-      return appComponent;
-    } catch (err) {
-      console.log(err);
-      // TODO: path is undefined due to block level scoping
-      throw new Error(`Cannot find pages/_app.js. Path tried: ${path}`);
-    }
-  }
-
-  // deno-lint-ignore no-explicit-any
-  private async loadDocumentComponent(): Promise<ComponentType<any>> {
-    try {
-      const { path } = this.manifest["/pages/_document.js"];
-      const { default: documentComponent } = await import(path);
-
-      return documentComponent;
-    } catch (err) {
-      console.log(err);
-      throw new Error(`Cannot find pages/_document.js. Path tried: ${path}`);
-    }
-  }
-
-  /**
-   * Load boostrap file
-   */
-  private async loadBootstrap(): Promise<string> {
-    const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(
-      path.resolve("./") + "/browser/bootstrap.js",
+    return await compiler.transpileDir(
+      this.config.srcDir,
+      walkOptions,
     );
-
-    return decoder.decode(data);
   }
 
-  private async compile(staticRoutes: string[]): Promise<void> {
-    await transpileApplication(
-      this,
-      this.config,
-      staticRoutes,
-    );
+  private async setModules(
+    modules: Record<string, Deno.TranspileOnlyResult>,
+    staticRoutes: string[],
+  ) {
+    for await (const moduleKey of Object.keys(modules)) {
+      const key = utils.cleanKey(moduleKey, this.config.srcDir);
+
+      // TODO: Maybe iterate again and render
+      // const html = await utils.renderSSGModule(moduleKey);
+
+      const module = new Module(
+        {
+          fullpath: moduleKey,
+          source: modules[moduleKey].source,
+          map: modules[moduleKey].map,
+          isStatic: renderer.isStatic(staticRoutes, moduleKey),
+        },
+      );
+
+      this.modules.set(key, module);
+    }
   }
 
   private async loadManifest(): Promise<void> {
@@ -211,46 +195,13 @@ export class ModuleHandler {
   /**
    * Iterate over `this.manifest` and set `this.modules`.
    */
-  private setModules(): void {
+  private setManifestModules(): void {
     Object.keys(this.manifest)
       .forEach((key) => {
         const { module, html } = this.manifest[key];
-        this.set(key, module, html);
+        // TODO
+        // this.set(key, module, html);
       });
-  }
-
-  /**
-   * Mutate & iterate over modules that are not `.map`
-   * replacing all local import paths with `.ts`, `.tsx`
-   * or `.jsx` with `.js`.
-   */
-  private rewriteImportPaths(): void {
-    Object.keys(this.modules)
-      .filter((key) => !key.includes(".map"))
-      .forEach((key) => this.rewriteImportPath(key));
-  }
-
-  private rewriteImportPath(key: string): void {
-    let { module } = this.modules[key];
-    const matched = module.match(reImportPath) || [];
-
-    matched.forEach((path) => {
-      let alteredPath;
-      // TODO: Match remaining string types
-      // || path.match(reSingleQuotes) || path.match(reBackTicks)
-      const importURL = path.match(reDoubleQuotes);
-      if (!importURL || !importURL[0]) return;
-
-      if (!importURL[0].match(reHttp)) {
-        alteredPath = path.replace(/\.(jsx|mjs|tsx?)/g, ".js");
-      }
-
-      if (alteredPath) {
-        module = module.replace(path, alteredPath);
-      }
-    });
-
-    this.modules[key].module = module;
   }
 
   /**
@@ -275,57 +226,61 @@ export class ModuleHandler {
   }
 
   private async writeModules() {
-    for (const key of this.keys()) {
+    for await (const key of this.keys()) {
       await this.writeModule(key);
     }
   }
 
   private async writeModule(key: string) {
-    const { module, html } = this.get(key);
-    const path = `${this.appRoot}/.tails/src${key}`;
+    const module = (this.get(key) as Module);
+    const writePath = `${this.appRoot}/.tails/src${key}`;
 
-    this.manifest[key] = { path, module, html };
-    await ensureTextFile(path, module);
-    if (html) await ensureTextFile(`${path}.html`, html);
+    this.manifest[key] = {
+      path: writePath,
+      module: module.source as string,
+      html: module.html,
+    };
+
+    await module.write(writePath);
   }
 
   // TODO: Move into compiler?
   private async recompile(filePath: string, staticRoutes: string[]) {
-    const modules: Record<string, string> = {};
-    const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(filePath);
+    // const modules: Record<string, string> = {};
+    // const decoder = new TextDecoder("utf-8");
+    // const data = await Deno.readFile(filePath);
 
-    const key = filePath
-      .replace(`${this.config.assetDir}`, "");
+    // const key = filePath
+    //   .replace(`${this.config.assetDir}`, "");
 
-    modules[key] = decoder.decode(data);
+    // modules[key] = decoder.decode(data);
 
-    const transpiled = await Deno.transpileOnly(modules);
+    // const transpiled = await Deno.transpileOnly(modules);
 
-    let html;
-    if (filePath.includes("/pages")) {
-      html = await this.renderHTML(filePath, staticRoutes);
-    }
+    // let html;
+    // if (filePath.includes("/pages")) {
+    //   html = await this.renderHTML(filePath, staticRoutes);
+    // }
 
-    const JSKey = key.replace(/\.(jsx|mjs|tsx|ts|js?)/g, ".js");
-    const sourceMap = transpiled[key].map;
+    // const JSKey = key.replace(/\.(jsx|mjs|tsx|ts|js?)/g, ".js");
+    // const sourceMap = transpiled[key].map;
 
-    this.set(
-      JSKey,
-      transpiled[key].source,
-      html,
-    );
-    if (sourceMap) {
-      this.set(
-        `${JSKey}.map`,
-        sourceMap,
-      );
-    }
+    // this.set(
+    //   JSKey,
+    //   transpiled[key].source,
+    //   html,
+    // );
+    // if (sourceMap) {
+    //   this.set(
+    //     `${JSKey}.map`,
+    //     sourceMap,
+    //   );
+    // }
 
-    this.rewriteImportPath(JSKey);
-    this.rewriteImportPath(`${JSKey}.map`);
-    await this.writeModule(JSKey);
-    await this.writeModule(`${JSKey}.map`);
+    // this.rewriteImportPath(JSKey);
+    // this.rewriteImportPath(`${JSKey}.map`);
+    // await this.writeModule(JSKey);
+    // await this.writeModule(`${JSKey}.map`);
   }
 
   private async renderHTML(filePath: string, staticRoutes: string[]) {
@@ -356,5 +311,64 @@ export class ModuleHandler {
       App,
       Document,
     );
+  }
+
+  /**
+   * Loads App, Document & bootstrap.js. This MUST be called AFTER
+   * `writeAll` as loadXComponent expects the manifest to be built.
+   */
+  private async setDefaultComponents(): Promise<void> {
+    this.appComponent = await this.loadAppComponent();
+    this.documentComponent = await this.loadDocumentComponent();
+    this.bootstrap = await this.loadBootstrap();
+  }
+
+  // deno-lint-ignore no-explicit-any
+  private async loadAppComponent(): Promise<ComponentType<any>> {
+    const module = this.get("/pages/_app.js");
+    if (!module) {
+      throw new Error("Could not find _app.js");
+    }
+
+    const { writePath } = module;
+
+    try {
+      const { default: appComponent } = await import(writePath as string);
+      return appComponent;
+    } catch (err) {
+      console.log(err);
+      throw new Error(`Failed to import _app.js. Path: ${writePath}`);
+    }
+  }
+
+  // deno-lint-ignore no-explicit-any
+  private async loadDocumentComponent(): Promise<ComponentType<any>> {
+    const module = this.get("/pages/_document.js");
+    if (!module) {
+      throw new Error("Could not find _document.js");
+    }
+
+    const { writePath } = module;
+
+    try {
+      const { default: documentComponent } = await import(writePath as string);
+
+      return documentComponent;
+    } catch (err) {
+      console.log(err);
+      throw new Error(`Failed to import _document.js. Path: ${writePath}`);
+    }
+  }
+
+  /**
+   * Load boostrap file
+   */
+  private async loadBootstrap(): Promise<string> {
+    const decoder = new TextDecoder("utf-8");
+    const data = await Deno.readFile(
+      path.resolve("./") + "/browser/bootstrap.js",
+    );
+
+    return decoder.decode(data);
   }
 }

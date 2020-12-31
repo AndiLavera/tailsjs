@@ -7,6 +7,7 @@ import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
+import Module from "../modules/module.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -66,24 +67,24 @@ export default class AssetRouter {
 
   private setModuleRoutes() {
     log.debug("JS Asset Routes:");
-    Object.keys(this.moduleHandler.modules).forEach((moduleKey) => {
-      const route = moduleKey.replace("/pages", "");
+    for (const key of this.moduleHandler.keys()) {
+      const route = key.replace("/pages", "");
       log.debug(`  ${route}`);
 
       this.router.get(route, (context: Context) => {
         try {
-          let module = this.moduleHandler.modules[moduleKey].module;
+          let source = (this.moduleHandler.get(key) as Module).source as string;
           if (this.config.mode === "development") {
-            module = injectHMR(moduleKey, module);
+            source = injectHMR(key, source);
           }
 
           context.response.type = getContentType(route);
-          context.response.body = module;
+          context.response.body = source;
         } catch (error) {
           log.error(error);
         }
       });
-    });
+    }
   }
 
   private handleHMR() {
@@ -97,7 +98,7 @@ export default class AssetRouter {
 
           const data = JSON.parse(event);
           if (data.type === "hotAccept" && util.isNEString(data.id)) {
-            const mod = this.moduleHandler.modules[data.id];
+            const mod = this.moduleHandler.get(data.id);
 
             if (mod) {
               const callback = async () => {

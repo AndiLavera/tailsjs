@@ -1,6 +1,6 @@
 import { WalkOptions } from "https://deno.land/std@0.78.0/fs/walk.ts";
 import { path, walk } from "../std.ts";
-import plugins from "./plugins.ts";
+import * as plugins from "./plugins.ts";
 
 export async function transpileDir(
   pathname: string,
@@ -27,12 +27,6 @@ export async function walkDir(
         const { path: pathname } of walk(folderName, walkOptions)
       ) {
         const data = await Deno.readFile(pathname);
-        // TODO: Possible callback
-        // const { transformedPath, transformedData } = await handlePlugins(
-        //   pathname,
-        //   decoder.decode(data),
-        // );
-
         modules[pathname] = decoder.decode(data);
       }
     }
@@ -42,8 +36,7 @@ export async function walkDir(
 }
 
 export async function transpile(modules: Record<string, string>) {
-  await plugins.preTransform(modules);
-  const transpiledModules = await Deno.transpileOnly(modules);
-  await plugins.postTransform(transpiledModules);
-  return transpiledModules;
+  const transformedModules = await plugins.preTransform(modules);
+  const transpiledModules = await Deno.transpileOnly(transformedModules);
+  return await plugins.postTransform(transpiledModules);
 }

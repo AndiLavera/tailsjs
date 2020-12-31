@@ -68,7 +68,7 @@ export interface SSROptions {
 }
 
 /**
- * A plugin for **Aleph.js** application.
+ * A plugin for **Tails.js** application.
  */
 export interface Plugin {
   /** `name` gives the plugin a name. */
@@ -80,12 +80,30 @@ export interface Plugin {
   /** `resolve` resolves the import url, if the `external` returned the compilation will skip the import url. */
   resolve?(url: string): { url: string; external?: boolean };
   /** `transform` transforms the source content. */
-  transform?(
-    content: Uint8Array,
-    url: string,
-  ): Promise<{
-    code: string;
-    map?: string;
-    loader?: "js" | "ts" | "css" | "markdown";
+  // transform?(
+  //   content: Uint8Array,
+  //   url: string,
+  // ): Promise<{
+  //   code: string;
+  //   map?: string;
+  //   loader?: "js" | "ts" | "css" | "markdown";
+  // }>;
+
+  /**
+   * Handles transforming the pathname or source
+   * before transpiling.
+   */
+  preTransform?(pathname: string, content: string): Promise<{
+    transformedPath: string;
+    transformedContent: string;
+  }>;
+
+  /**
+   * Handles transforming the pathname or source
+   * after transpiling.
+   */
+  postTransform?(pathname: string, module: Deno.TranspileOnlyResult): Promise<{
+    transformedPath: string;
+    transformedModule: Deno.TranspileOnlyResult;
   }>;
 }
