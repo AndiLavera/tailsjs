@@ -1,7 +1,7 @@
-import { reDoubleQuotes, reHttp, reImportPath } from "../core/utils.ts";
-import { Plugin } from "../types.ts";
+import { reDoubleQuotes, reHttp, reImportPath } from "../../core/utils.ts";
+import { CompilerPlugin } from "../../types.ts";
 
-const defaultPlugin: Plugin = {
+const defaultPlugin: CompilerPlugin = {
   name: "rewrite-imports",
   test: /.js/,
   acceptHMR: true,

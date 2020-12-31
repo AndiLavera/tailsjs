@@ -1,4 +1,4 @@
-import { render } from "../compiler/compiler.ts";
+import { render } from "../compiler/compiler.old.ts";
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
@@ -9,7 +9,7 @@ import log from "../logger/logger.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
 import { EventEmitter } from "../hmr/events.ts";
 import Module from "../modules/module.ts";
-import * as compiler from "../compiler/compiler2.ts";
+import * as compiler from "../compiler/compiler.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
 
@@ -151,7 +151,7 @@ export class ModuleHandler {
       skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
     };
 
-    return await compiler.transpileDir(
+    return await compiler.transpileDirWithPlugins(
       this.config.srcDir,
       walkOptions,
     );

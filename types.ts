@@ -1,3 +1,4 @@
+import { WalkOptions } from "https://deno.land/std@0.78.0/fs/walk.ts";
 import { Context } from "./deps.ts";
 
 type HTTPMethod =
@@ -68,26 +69,24 @@ export interface SSROptions {
 }
 
 /**
- * A plugin for **Tails.js** application.
+ * A compiler plugin for **Tails.js** application.
  */
-export interface Plugin {
+export interface CompilerPlugin {
   /** `name` gives the plugin a name. */
   name?: string;
   /** `test` matches the import url. */
   test: RegExp;
   /** `acceptHMR` accepts the HMR. */
   acceptHMR?: boolean;
-  /** `resolve` resolves the import url, if the `external` returned the compilation will skip the import url. */
-  resolve?(url: string): { url: string; external?: boolean };
-  /** `transform` transforms the source content. */
-  // transform?(
-  //   content: Uint8Array,
-  //   url: string,
-  // ): Promise<{
-  //   code: string;
-  //   map?: string;
-  //   loader?: "js" | "ts" | "css" | "markdown";
-  // }>;
+
+  /**
+   * Merged with default `walkOptions` when transpiling. Used
+   * to include files such as css when walking the user's
+   * application is being transpiled.
+   * Note: Make sure to transfrom the source content
+   * before transpiling occurs (preTransform).
+   */
+  walkOptions?: WalkOptions;
 
   /**
    * Handles transforming the pathname or source
@@ -105,5 +104,29 @@ export interface Plugin {
   postTransform?(pathname: string, module: Deno.TranspileOnlyResult): Promise<{
     transformedPath: string;
     transformedModule: Deno.TranspileOnlyResult;
+  }>;
+}
+
+/**
+ * A plugin for **Tails.js** application.
+ */
+export interface Plugin {
+  /** `name` gives the plugin a name. */
+  name?: string;
+  /** `test` matches the import url. */
+  test: RegExp;
+  /** `acceptHMR` accepts the HMR. */
+  acceptHMR?: boolean;
+
+  /** `resolve` resolves the import url, if the `external` returned the compilation will skip the import url. */
+  resolve?(url: string): { url: string; external?: boolean };
+  /** `transform` transforms the source content. */
+  transform?(
+    content: Uint8Array,
+    url: string,
+  ): Promise<{
+    code: string;
+    map?: string;
+    loader?: "js" | "ts" | "css" | "markdown";
   }>;
 }

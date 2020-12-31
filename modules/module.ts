@@ -1,6 +1,6 @@
 import { ComponentType } from "../deps.ts";
 import { dynamicImport } from "../utils/dynamicImport.ts";
-import { transpile as transpileModule } from "../compiler/compiler2.ts";
+import { transpile as transpileModule } from "../compiler/compiler.ts";
 import { ensureTextFile } from "../fs.ts";
 
 interface Options {
