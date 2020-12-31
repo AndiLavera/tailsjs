@@ -1,5 +1,6 @@
 import React, { useState } from "https://esm.sh/react@17.0.1";
 import Logo from "../components/logo.tsx";
+import "../style/index.css";
 
 function Home() {
   const [count, setCount] = useState(0);
