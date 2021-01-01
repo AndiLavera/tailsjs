@@ -1,5 +1,6 @@
 import css from "https://esm.sh/css@3.0.0";
 import { CompilerPlugin } from "../../types.ts";
+import { preTranspileTransform } from "../plugins.ts";
 
 const defaultPlugin: CompilerPlugin = {
   name: "css-loader",
@@ -8,7 +9,7 @@ const defaultPlugin: CompilerPlugin = {
   walkOptions: {
     exts: [".module.css"],
   },
-  async preTransform(pathname: string, content: string) {
+  async preTranspileTransform(pathname: string, content: string) {
     console.log("css");
     console.log(pathname);
 

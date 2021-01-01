@@ -5,13 +5,10 @@ const defaultPlugin: CompilerPlugin = {
   name: "rewrite-imports",
   test: /.js/,
   acceptHMR: true,
-  async preTransform(pathname: string, content: string) {
-    return await {
-      transformedPath: pathname,
-      transformedContent: content,
-    };
-  },
-  async postTransform(pathname: string, module: Deno.TranspileOnlyResult) {
+  async postTranspileTransform(
+    pathname: string,
+    module: Deno.TranspileOnlyResult,
+  ) {
     return await {
       transformedPath: pathname,
       transformedModule: rewriteImports(module),

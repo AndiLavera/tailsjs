@@ -14,16 +14,16 @@ export function forEach(callback: (plugin: CompilerPlugin) => void) {
  *
  * @param modules
  */
-export async function preTransform(modules: Record<string, string>) {
+export async function preTranspileTransform(modules: Record<string, string>) {
   const transformedModules: Record<string, string> = {};
 
   for await (const moduleKey of Object.keys(modules)) {
     const content = modules[moduleKey];
 
     for await (const plugin of plugins) {
-      if (moduleKey.match(plugin.test) && plugin.preTransform) {
+      if (moduleKey.match(plugin.test) && plugin.preTranspileTransform) {
         const { transformedPath, transformedContent } = await plugin
-          .preTransform(
+          .preTranspileTransform(
             moduleKey,
             content,
           );
@@ -44,7 +44,7 @@ export async function preTransform(modules: Record<string, string>) {
  *
  * @param modules
  */
-export async function postTransform(
+export async function postTranspileTransform(
   modules: Record<string, Deno.TranspileOnlyResult>,
 ) {
   const transformedModules: Record<string, Deno.TranspileOnlyResult> = {};
@@ -53,9 +53,9 @@ export async function postTransform(
     const module = modules[moduleKey];
 
     for await (const plugin of plugins) {
-      if (moduleKey.match(plugin.test) && plugin.postTransform) {
+      if (moduleKey.match(plugin.test) && plugin.postTranspileTransform) {
         const { transformedPath, transformedModule } = await plugin
-          .postTransform(
+          .postTranspileTransform(
             moduleKey,
             module,
           );

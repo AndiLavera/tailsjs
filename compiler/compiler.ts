@@ -38,11 +38,11 @@ export async function transpileDirWithPlugins(
   });
 
   let transformedModules =
-    (await plugins.preTransform(pluginModules) as unknown as Record<
+    (await plugins.preTranspileTransform(pluginModules) as unknown as Record<
       string,
       Deno.TranspileOnlyResult
     >);
-  transformedModules = await plugins.postTransform(transformedModules);
+  transformedModules = await plugins.postTranspileTransform(transformedModules);
   console.log(pluginModules);
 
   return modules;
@@ -82,7 +82,7 @@ export async function walkDir(
 }
 
 export async function transpile(modules: Record<string, string>) {
-  const transformedModules = await plugins.preTransform(modules);
+  const transformedModules = await plugins.preTranspileTransform(modules);
   const transpiledModules = await Deno.transpileOnly(transformedModules);
-  return await plugins.postTransform(transpiledModules);
+  return await plugins.postTranspileTransform(transpiledModules);
 }

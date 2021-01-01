@@ -92,7 +92,7 @@ export interface CompilerPlugin {
    * Handles transforming the pathname or source
    * before transpiling.
    */
-  preTransform?(pathname: string, content: string): Promise<{
+  preTranspileTransform?(pathname: string, content: string): Promise<{
     transformedPath: string;
     transformedContent: string;
   }>;
@@ -101,7 +101,10 @@ export interface CompilerPlugin {
    * Handles transforming the pathname or source
    * after transpiling.
    */
-  postTransform?(pathname: string, module: Deno.TranspileOnlyResult): Promise<{
+  postTranspileTransform?(
+    pathname: string,
+    module: Deno.TranspileOnlyResult,
+  ): Promise<{
     transformedPath: string;
     transformedModule: Deno.TranspileOnlyResult;
   }>;
