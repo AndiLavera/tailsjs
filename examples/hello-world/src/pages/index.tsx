@@ -1,5 +1,7 @@
 import React, { useState } from "https://esm.sh/react@17.0.1";
 import Logo from "../components/logo.tsx";
+import { styles } from "../style/index.css";
+import main from "../wasm/42.wasm";
 
 function Home() {
   const [count, setCount] = useState(0);
@@ -11,7 +13,9 @@ function Home() {
         <Logo />
       </p>
 
-      <h1>Welcome to use <strong>Tails.js</strong>!</h1>
+      <h1>
+        Welcome to use <strong style={styles.red}>Tails.js {main()}</strong>!
+      </h1>
 
       <p className="links">
         <a

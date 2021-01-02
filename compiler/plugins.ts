@@ -1,8 +1,10 @@
 import { CompilerPlugin } from "../types.ts";
-import rewriteImportPath from "./plugins/rewriteImportPaths.ts";
-import css from "./plugins/css.ts";
+import nonjsImports from "./plugins/nonjsImports.ts";
+import cssModule from "./plugins/cssModule.ts";
+import wasm from "./plugins/wasm.ts";
+import { reImportPath } from "../core/utils.ts";
 
-const plugins = [rewriteImportPath, css];
+const plugins = [nonjsImports, cssModule, wasm];
 
 export function forEach(callback: (plugin: CompilerPlugin) => void) {
   return plugins.forEach((plugin) => callback(plugin));
@@ -10,28 +12,33 @@ export function forEach(callback: (plugin: CompilerPlugin) => void) {
 
 /**
  * Handles iterating through all modules passing the module & key
- * into plugin.preTransform.
+ * into plugin.preTransform. All modules are passed into `resolve`
+ * in case they have unsupported imports.
  *
  * @param modules
  */
-export async function preTranspileTransform(modules: Record<string, string>) {
+export async function transform(modules: Record<string, string>) {
   const transformedModules: Record<string, string> = {};
 
   for await (const moduleKey of Object.keys(modules)) {
     const content = modules[moduleKey];
+    let transformed = false;
 
     for await (const plugin of plugins) {
-      if (moduleKey.match(plugin.test) && plugin.preTranspileTransform) {
+      if (moduleKey.match(plugin.test) && plugin.transform) {
         const { transformedPath, transformedContent } = await plugin
-          .preTranspileTransform(
+          .transform(
             moduleKey,
             content,
           );
-        transformedModules[transformedPath] = transformedContent;
-        continue;
-      }
 
-      transformedModules[moduleKey] = content;
+        transformedModules[transformedPath] = await resolve(transformedContent);
+        transformed = true;
+      }
+    }
+
+    if (!transformed) {
+      transformedModules[moduleKey] = await resolve(content);
     }
   }
 
@@ -39,33 +46,25 @@ export async function preTranspileTransform(modules: Record<string, string>) {
 }
 
 /**
- * Handles iterating through all modules passing the module & key
- * into plugin.postTransform.
+ * Handles iterating over the imports of a module and
+ * passing the import path into a plugin.
  *
- * @param modules
+ * @param content
  */
-export async function postTranspileTransform(
-  modules: Record<string, Deno.TranspileOnlyResult>,
-) {
-  const transformedModules: Record<string, Deno.TranspileOnlyResult> = {};
+async function resolve(content: string) {
+  const matchedImports = content.match(reImportPath) || [];
+  let transformedContent = content;
 
-  for await (const moduleKey of Object.keys(modules)) {
-    const module = modules[moduleKey];
-
+  for await (const imp of matchedImports) {
     for await (const plugin of plugins) {
-      if (moduleKey.match(plugin.test) && plugin.postTranspileTransform) {
-        const { transformedPath, transformedModule } = await plugin
-          .postTranspileTransform(
-            moduleKey,
-            module,
-          );
-        transformedModules[transformedPath] = transformedModule;
-        continue;
+      let transformedImp = imp;
+      if (imp.match(plugin.test) && plugin.resolve) {
+        transformedImp = plugin.resolve(imp);
       }
 
-      transformedModules[moduleKey] = module;
+      transformedContent = transformedContent.replace(imp, transformedImp);
     }
   }
 
-  return transformedModules;
+  return transformedContent;
 }

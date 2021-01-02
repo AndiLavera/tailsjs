@@ -69,7 +69,8 @@ export interface SSROptions {
 }
 
 /**
- * A compiler plugin for **Tails.js** application.
+ * A compiler plugin for **Tails.js** application. The transform
+ * methods are invoked just before transpile & just after transpiling.
  */
 export interface CompilerPlugin {
   /** `name` gives the plugin a name. */
@@ -78,7 +79,6 @@ export interface CompilerPlugin {
   test: RegExp;
   /** `acceptHMR` accepts the HMR. */
   acceptHMR?: boolean;
-
   /**
    * Merged with default `walkOptions` when transpiling. Used
    * to include files such as css when walking the user's
@@ -87,26 +87,19 @@ export interface CompilerPlugin {
    * before transpiling occurs (preTransform).
    */
   walkOptions?: WalkOptions;
-
+  /**
+   * `resolve` resolves the import url. This is invoked
+   * before transpiling to ensure unsupported imports,
+   * such as css imports, are not transpiled.
+   */
+  resolve?(url: string): string;
   /**
    * Handles transforming the pathname or source
    * before transpiling.
    */
-  preTranspileTransform?(pathname: string, content: string): Promise<{
+  transform?(pathname: string, content: string): Promise<{
     transformedPath: string;
     transformedContent: string;
-  }>;
-
-  /**
-   * Handles transforming the pathname or source
-   * after transpiling.
-   */
-  postTranspileTransform?(
-    pathname: string,
-    module: Deno.TranspileOnlyResult,
-  ): Promise<{
-    transformedPath: string;
-    transformedModule: Deno.TranspileOnlyResult;
   }>;
 }
 

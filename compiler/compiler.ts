@@ -2,6 +2,11 @@ import { WalkOptions } from "https://deno.land/std@0.78.0/fs/walk.ts";
 import { path, walk } from "../std.ts";
 import * as plugins from "./plugins.ts";
 
+interface TranspiledModules {
+  modules: Record<string, Deno.TranspileOnlyResult>;
+  plugins: Record<string, string>;
+}
+
 /**
  * Handles merging all plugin walkOptions and then pasing the result
  * over to `transpileDir`
@@ -12,8 +17,10 @@ import * as plugins from "./plugins.ts";
 export async function transpileDirWithPlugins(
   pathname: string,
   walkOptions: WalkOptions,
-) {
-  const modules = await transpileDir(pathname, walkOptions);
+): Promise<TranspiledModules> {
+  const modules = await walkDir(pathname, walkOptions);
+  const transformedModules = await plugins.transform(modules);
+  const transpiledModules = await transpile(transformedModules);
 
   let exts: string[] = [];
   let skip: RegExp[] = [];
@@ -37,24 +44,14 @@ export async function transpileDirWithPlugins(
     skip,
   });
 
-  let transformedModules =
-    (await plugins.preTranspileTransform(pluginModules) as unknown as Record<
-      string,
-      Deno.TranspileOnlyResult
-    >);
-  transformedModules = await plugins.postTranspileTransform(transformedModules);
-  console.log(pluginModules);
+  const transformedPluginModules = await plugins.transform(
+    pluginModules,
+  );
 
-  return modules;
-}
-
-export async function transpileDir(
-  pathname: string,
-  walkOptions?: WalkOptions,
-  callback?: () => void,
-) {
-  const modules = await walkDir(pathname, walkOptions);
-  return transpile(modules);
+  return {
+    modules: transpiledModules,
+    plugins: transformedPluginModules,
+  };
 }
 
 export async function walkDir(
@@ -82,7 +79,5 @@ export async function walkDir(
 }
 
 export async function transpile(modules: Record<string, string>) {
-  const transformedModules = await plugins.preTranspileTransform(modules);
-  const transpiledModules = await Deno.transpileOnly(transformedModules);
-  return await plugins.postTranspileTransform(transpiledModules);
+  return await Deno.transpileOnly(modules);
 }

@@ -10,6 +10,7 @@ interface Options {
   map?: string;
   content?: string;
   isStatic?: boolean;
+  isPlugin?: boolean;
 }
 
 export default class Module {
@@ -34,15 +35,20 @@ export default class Module {
   html?: string;
   writePath?: string;
 
+  isPlugin: boolean;
+
   /** The function after importing */
   private importedModule?: any; // () => any?
 
-  constructor({ fullpath, html, source, map, content, isStatic }: Options) {
+  constructor(
+    { fullpath, html, source, map, content, isStatic, isPlugin }: Options,
+  ) {
     this.fullPath = fullpath;
     this.html = html;
     this.source = source;
     this.map = map;
     this.content = content;
+    this.isPlugin = isPlugin || false;
     this.isStatic = isStatic || false;
     this.srcPath = fullpath.split("/src")[1];
   }

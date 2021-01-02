@@ -13,6 +13,11 @@ import * as compiler from "../compiler/compiler.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
 
+interface TranspiledModules {
+  modules: Record<string, Deno.TranspileOnlyResult>;
+  plugins: Record<string, string>;
+}
+
 interface ManifestModule {
   path: string;
   module: string;
@@ -60,8 +65,8 @@ export class ModuleHandler {
   }
 
   async build(staticRoutes: string[]) {
-    const modules = await this.compile();
-    await this.setModules(modules, staticRoutes);
+    const compiledResults = await this.compile();
+    await this.setModules(compiledResults, staticRoutes);
     await this.writeAll();
     await this.setDefaultComponents();
 
@@ -144,7 +149,7 @@ export class ModuleHandler {
     }
   }
 
-  private async compile(): Promise<Record<string, Deno.TranspileOnlyResult>> {
+  private async compile(): Promise<TranspiledModules> {
     const walkOptions = {
       includeDirs: true,
       exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
@@ -158,25 +163,43 @@ export class ModuleHandler {
   }
 
   private async setModules(
-    modules: Record<string, Deno.TranspileOnlyResult>,
+    compiledResults: TranspiledModules,
     staticRoutes: string[],
   ) {
-    for await (const moduleKey of Object.keys(modules)) {
-      const key = utils.cleanKey(moduleKey, this.config.srcDir);
+    for await (const key of Object.keys(compiledResults.modules)) {
+      const tmpModule = compiledResults.modules[key];
+      const cleanedKey = utils.cleanKey(key, this.config.srcDir);
 
       // TODO: Maybe iterate again and render
       // const html = await utils.renderSSGModule(moduleKey);
 
       const module = new Module(
         {
-          fullpath: moduleKey,
-          source: modules[moduleKey].source,
-          map: modules[moduleKey].map,
-          isStatic: renderer.isStatic(staticRoutes, moduleKey),
+          fullpath: key,
+          source: tmpModule.source,
+          map: tmpModule.map,
+          isStatic: renderer.isStatic(staticRoutes, key),
+          isPlugin: false,
         },
       );
 
-      this.modules.set(key, module);
+      this.modules.set(cleanedKey, module);
+    }
+
+    for await (const key of Object.keys(compiledResults.plugins)) {
+      const tmpModule = compiledResults.plugins[key];
+      const cleanedKey = utils.cleanKey(key, this.config.srcDir);
+
+      const module = new Module(
+        {
+          fullpath: key,
+          source: tmpModule,
+          // isStatic: renderer.isStatic(staticRoutes, key),
+          isPlugin: true,
+        },
+      );
+
+      this.modules.set(cleanedKey, module);
     }
   }
 
