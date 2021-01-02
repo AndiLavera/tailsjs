@@ -103,26 +103,15 @@ export interface CompilerPlugin {
   }>;
 }
 
-/**
- * A plugin for **Tails.js** application.
- */
-export interface Plugin {
-  /** `name` gives the plugin a name. */
-  name?: string;
-  /** `test` matches the import url. */
-  test: RegExp;
-  /** `acceptHMR` accepts the HMR. */
-  acceptHMR?: boolean;
+export interface TranspiledModules {
+  modules: Record<string, Deno.TranspileOnlyResult>;
+  plugins: Record<string, string>;
+}
 
-  /** `resolve` resolves the import url, if the `external` returned the compilation will skip the import url. */
-  resolve?(url: string): { url: string; external?: boolean };
-  /** `transform` transforms the source content. */
-  transform?(
-    content: Uint8Array,
-    url: string,
-  ): Promise<{
-    code: string;
-    map?: string;
-    loader?: "js" | "ts" | "css" | "markdown";
-  }>;
+export interface Manifest {
+  [key: string]: {
+    path: string;
+    module: string;
+    html?: string;
+  };
 }

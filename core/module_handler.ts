@@ -2,9 +2,7 @@ import { render } from "../compiler/compiler.old.ts";
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
-// import { Modules } from "../types.ts";
 import { Configuration } from "./configuration.ts";
-import { reDoubleQuotes, reEsmUrl, reHttp, reImportPath } from "./utils.ts";
 import log from "../logger/logger.ts";
 import { RouteHandler } from "../controller/route_handler.ts";
 import { EventEmitter } from "../hmr/events.ts";
@@ -12,21 +10,7 @@ import Module from "../modules/module.ts";
 import * as compiler from "../compiler/compiler.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
-
-interface TranspiledModules {
-  modules: Record<string, Deno.TranspileOnlyResult>;
-  plugins: Record<string, string>;
-}
-
-interface ManifestModule {
-  path: string;
-  module: string;
-  html?: string;
-}
-
-interface Manifest {
-  [key: string]: ManifestModule;
-}
+import { Manifest, TranspiledModules } from "../types.ts";
 
 export class ModuleHandler {
   bootstrap: string;

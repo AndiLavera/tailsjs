@@ -1,11 +1,7 @@
 import { WalkOptions } from "https://deno.land/std@0.78.0/fs/walk.ts";
 import { path, walk } from "../std.ts";
+import { TranspiledModules } from "../types.ts";
 import * as plugins from "./plugins.ts";
-
-interface TranspiledModules {
-  modules: Record<string, Deno.TranspileOnlyResult>;
-  plugins: Record<string, string>;
-}
 
 /**
  * Handles merging all plugin walkOptions and then pasing the result
