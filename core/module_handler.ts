@@ -164,6 +164,7 @@ export class ModuleHandler {
           map: tmpModule.map,
           isStatic: renderer.isStatic(staticRoutes, key),
           isPlugin: false,
+          writePath: `${this.appRoot}/.tails/src`,
         },
       );
 
@@ -178,7 +179,6 @@ export class ModuleHandler {
         {
           fullpath: key,
           source: tmpModule,
-          // isStatic: renderer.isStatic(staticRoutes, key),
           isPlugin: true,
         },
       );
@@ -253,21 +253,34 @@ export class ModuleHandler {
 
   // TODO: Move into compiler?
   private async recompile(filePath: string, staticRoutes: string[]) {
+    const key = utils.cleanKey(filePath, this.config.srcDir);
+    const module = this.modules.get(key);
+
+    if (!module) {
+      throw new Error(
+        `WatchError: Module could not be reloaded.
+        Path: ${filePath}
+        Key: ${key}
+        `,
+      );
+    }
+
+    await module.retranspile();
+
+    Deno.exit(5);
+
     // const modules: Record<string, string> = {};
     // const decoder = new TextDecoder("utf-8");
     // const data = await Deno.readFile(filePath);
-
-    // const key = filePath
-    //   .replace(`${this.config.assetDir}`, "");
 
     // modules[key] = decoder.decode(data);
 
     // const transpiled = await Deno.transpileOnly(modules);
 
-    // let html;
-    // if (filePath.includes("/pages")) {
-    //   html = await this.renderHTML(filePath, staticRoutes);
-    // }
+    // // let html;
+    // // if (filePath.includes("/pages")) {
+    // //   html = await this.renderHTML(filePath, staticRoutes);
+    // // }
 
     // const JSKey = key.replace(/\.(jsx|mjs|tsx|ts|js?)/g, ".js");
     // const sourceMap = transpiled[key].map;

@@ -1,10 +1,12 @@
 import { ComponentType } from "../deps.ts";
 import { dynamicImport } from "../utils/dynamicImport.ts";
-import { transpile as transpileModule } from "../compiler/compiler.ts";
+import * as compiler from "../compiler/compiler.ts";
+import * as plugins from "../compiler/plugins.ts";
 import { ensureTextFile } from "../fs.ts";
 
 interface Options {
   fullpath: string;
+  writePath: string;
   html?: string;
   source?: string;
   map?: string;
@@ -20,6 +22,9 @@ export default class Module {
   /** The path of the module after `/src` */
   srcPath: string;
 
+  /** The path the module will get written to. */
+  writePath: string;
+
   /** Is a static route */
   isStatic: boolean;
 
@@ -33,7 +38,6 @@ export default class Module {
   map?: string;
 
   html?: string;
-  writePath?: string;
 
   isPlugin: boolean;
 
@@ -41,13 +45,15 @@ export default class Module {
   private importedModule?: any; // () => any?
 
   constructor(
-    { fullpath, html, source, map, content, isStatic, isPlugin }: Options,
+    { fullpath, html, source, map, content, isStatic, isPlugin, writePath }:
+      Options,
   ) {
     this.fullPath = fullpath;
     this.html = html;
     this.source = source;
     this.map = map;
     this.content = content;
+    this.writePath = writePath;
     this.isPlugin = isPlugin || false;
     this.isStatic = isStatic || false;
     this.srcPath = fullpath.split("/src")[1];
@@ -93,20 +99,26 @@ export default class Module {
   }
 
   async retranspile() {
-    const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(this.fullPath);
-    const module: Record<string, string> = {};
-    module[`${this.fullPath}`] = decoder.decode(data);
+    if (this.isPlugin) {
+      console.log("PLUGIN RETRANSPILE NOT DONE");
+    } else {
+      const decoder = new TextDecoder("utf-8");
+      const module: Record<string, string> = {};
+      const key = `${this.fullPath}`;
 
-    const transpiledContent = await transpileModule(module);
-    this.source = transpiledContent[`${this.fullPath}`].source;
-    this.map = transpiledContent[`${this.fullPath}`].map;
+      const data = await Deno.readFile(this.fullPath);
+      module[key] = decoder.decode(data);
+
+      const transformedModule = await plugins.transform(module);
+      const transpiledModule = await compiler.transpile(transformedModule);
+
+      this.source = transpiledModule[key].source;
+      this.map = transpiledModule[key].map;
+    }
   }
 
-  async write(writePath: string) {
-    this.writePath = writePath;
-
-    await ensureTextFile(writePath, this.source as string);
-    if (this.html) await ensureTextFile(`${writePath}.html`, this.html);
+  async write() {
+    await ensureTextFile(this.writePath, this.source as string);
+    if (this.html) await ensureTextFile(`${this.writePath}.html`, this.html);
   }
 }
