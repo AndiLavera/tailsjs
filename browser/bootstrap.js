@@ -5,8 +5,8 @@ import App from "./_app.js";
 
 export async function bootstrap() {
   /**
-   * Converts something like `{&quot;version&quot;:&quot;0.1.0&quot;}`
-   * to `"{\"version\":\"0.1.0\"}"`
+   * Converts something like {&quot;version&quot;:&quot;0.1.0&quot;}
+   * to "{\"version\":\"0.1.0\"}"
    *
    * @param input
    */

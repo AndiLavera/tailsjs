@@ -28,15 +28,17 @@ export default class AssetRouter {
       await this.setHMRAssetRoutes();
     }
 
-    this.setDefaultRoutes();
+    await this.setDefaultRoutes();
     await this.setPublicRoutes();
     this.setModuleRoutes();
   }
 
-  private setDefaultRoutes() {
+  private async setDefaultRoutes() {
+    const bootstrap = await this.fetchTailsAsset("./browser/bootstrap.js");
+
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
-      context.response.body = this.moduleHandler.bootstrap;
+      context.response.body = bootstrap;
     });
 
     this.router.get(this.config.mainJSPath, (context: Context) => {
@@ -55,7 +57,7 @@ export default class AssetRouter {
     for await (const { path: staticFilePath } of walk(publicDir)) {
       if (publicDir === staticFilePath) continue;
 
-      const file = await this.fetchAsset(staticFilePath);
+      const file = await this.fetchStaticAsset(staticFilePath);
       const route = staticFilePath.replace(publicDir, "");
 
       this.router.get(route, (context: Context) => {
@@ -122,8 +124,8 @@ export default class AssetRouter {
   }
 
   private async setHMRAssetRoutes() {
-    const hmrData = await this.fetchAsset("./hmr/hmr.ts");
-    const eventData = await this.fetchAsset("./hmr/events.ts");
+    const hmrData = await this.fetchTailsAsset("./hmr/hmr.ts");
+    const eventData = await this.fetchTailsAsset("./hmr/events.ts");
 
     const hmrContent = await Deno.transpileOnly({
       "hmr.ts": hmrData,
@@ -141,7 +143,15 @@ export default class AssetRouter {
     });
   }
 
-  private async fetchAsset(pathName: string): Promise<string> {
+  private async fetchTailsAsset(pathName: string): Promise<string> {
+    const __dirname = path.dirname(new URL(import.meta.url).pathname);
+    console.log(path.join(__dirname, "..", pathName));
+
+    const data = await Deno.readFile(path.join(__dirname, "..", pathName));
+    return this.decoder.decode(data);
+  }
+
+  private async fetchStaticAsset(pathName: string): Promise<string> {
     const data = await Deno.readFile(pathName);
     return this.decoder.decode(data);
   }

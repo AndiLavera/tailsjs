@@ -11,10 +11,9 @@ import * as compiler from "../compiler/compiler.ts";
 import * as plugins from "../compiler/plugins.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
-import { Manifest, TranspiledModules } from "../types.ts";
+import { Manifest } from "../types.ts";
 
 export class ModuleHandler {
-  bootstrap: string;
   // deno-lint-ignore no-explicit-any
   appComponent?: ComponentType<any>;
   // deno-lint-ignore no-explicit-any
@@ -30,7 +29,6 @@ export class ModuleHandler {
     this.modules = new Map();
     this.manifest = {};
     this.eventListeners = [];
-    this.bootstrap = 'throw new Error("No Bootstrap Content")';
   }
 
   get appRoot(): string {
@@ -254,6 +252,7 @@ export class ModuleHandler {
     }
 
     await module.retranspile();
+    await module.write();
 
     Deno.exit(5);
 
@@ -328,7 +327,6 @@ export class ModuleHandler {
   private async setDefaultComponents(): Promise<void> {
     this.appComponent = await this.loadComponent("/pages/_app.js");
     this.documentComponent = await this.loadComponent("/pages/_document.js");
-    this.bootstrap = await this.loadBootstrap();
   }
 
   // deno-lint-ignore no-explicit-any
@@ -345,18 +343,6 @@ export class ModuleHandler {
       console.log(err);
       throw new Error(`Failed to import ${key}. Path: ${module.writePath}`);
     }
-  }
-
-  /**
-   * Load boostrap file
-   */
-  private async loadBootstrap(): Promise<string> {
-    const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(
-      path.resolve("./") + "/browser/bootstrap.js",
-    );
-
-    return decoder.decode(data);
   }
 
   async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
