@@ -67,7 +67,7 @@ export default class Module {
   }
 
   get module() {
-    return this.importedModule || this.importModule;
+    return this.importedModule || this.import();
   }
 
   // TODO: Any?
@@ -76,13 +76,13 @@ export default class Module {
   }
 
   // deno-lint-ignore no-explicit-any
-  async importModule(): Promise<ComponentType<any>> {
+  async import(): Promise<ComponentType<any>> {
     if (this.importedModule) {
       this.importedModule = await dynamicImport(this.fullPath);
       return this.importedModule;
     }
 
-    this.importedModule = await import(this.fullPath);
+    this.importedModule = await import(this.writePath as string);
     return this.importedModule;
   }
 

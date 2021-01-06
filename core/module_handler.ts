@@ -87,56 +87,6 @@ export class ModuleHandler {
     }
   }
 
-  // private async compile(): Promise<TranspiledModules> {
-  //   const walkOptions = {
-  //     includeDirs: true,
-  //     exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
-  //     skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
-  //   };
-
-  //   return await compiler.transpileDirWithPlugins(
-  //     this.config.srcDir,
-  //     walkOptions,
-  //   );
-  // }
-
-  private async setModules(
-    compiledResults: TranspiledModules,
-    staticRoutes: string[],
-  ) {
-    for await (const key of Object.keys(compiledResults.modules)) {
-      const tmpModule = compiledResults.modules[key];
-      const cleanedKey = utils.cleanKey(key, this.config.srcDir);
-
-      // TODO: Maybe iterate again and render
-      // const html = await utils.renderSSGModule(moduleKey);
-
-      const module = new Module({
-        fullpath: key,
-        source: tmpModule.source,
-        map: tmpModule.map,
-        isStatic: renderer.isStatic(staticRoutes, key),
-        isPlugin: false,
-        appRoot: this.appRoot,
-      });
-
-      this.modules.set(cleanedKey, module);
-    }
-
-    for await (const key of Object.keys(compiledResults.plugins)) {
-      const cleanedKey = utils.cleanKey(key, this.config.srcDir);
-
-      const module = new Module({
-        fullpath: key,
-        source: compiledResults.plugins[key],
-        isPlugin: true,
-        appRoot: this.appRoot,
-      });
-
-      this.modules.set(cleanedKey, module);
-    }
-  }
-
   // TODO: Rename to compile
   private async loadModules(staticRoutes: string[]) {
     const decoder = new TextDecoder();
@@ -376,45 +326,24 @@ export class ModuleHandler {
    * `writeAll` as loadXComponent expects the manifest to be built.
    */
   private async setDefaultComponents(): Promise<void> {
-    this.appComponent = await this.loadAppComponent();
-    this.documentComponent = await this.loadDocumentComponent();
+    this.appComponent = await this.loadComponent("/pages/_app.js");
+    this.documentComponent = await this.loadComponent("/pages/_document.js");
     this.bootstrap = await this.loadBootstrap();
   }
 
   // deno-lint-ignore no-explicit-any
-  private async loadAppComponent(): Promise<ComponentType<any>> {
-    const module = this.get("/pages/_app.js");
+  private async loadComponent(key: string): Promise<ComponentType<any>> {
+    const module = this.get(key);
     if (!module) {
-      throw new Error("Could not find _app.js");
+      throw new Error(`Could not find ${key}`);
     }
-
-    const { writePath } = module;
 
     try {
-      const { default: appComponent } = await import(writePath as string);
-      return appComponent;
+      const { default: component } = await module.module;
+      return component;
     } catch (err) {
       console.log(err);
-      throw new Error(`Failed to import _app.js. Path: ${writePath}`);
-    }
-  }
-
-  // deno-lint-ignore no-explicit-any
-  private async loadDocumentComponent(): Promise<ComponentType<any>> {
-    const module = this.get("/pages/_document.js");
-    if (!module) {
-      throw new Error("Could not find _document.js");
-    }
-
-    const { writePath } = module;
-
-    try {
-      const { default: documentComponent } = await import(writePath as string);
-
-      return documentComponent;
-    } catch (err) {
-      console.log(err);
-      throw new Error(`Failed to import _document.js. Path: ${writePath}`);
+      throw new Error(`Failed to import ${key}. Path: ${module.writePath}`);
     }
   }
 
