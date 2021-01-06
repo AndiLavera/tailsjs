@@ -86,6 +86,7 @@ export class RouteHandler {
       const { routes } = await import(this.routesPath);
       this.routes = routes;
     } catch (error) {
+      console.log(error);
       throw new Error("Could not find routes file.");
     }
   }
