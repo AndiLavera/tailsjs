@@ -44,6 +44,7 @@ export class RouteHandler {
 
     this.controllersDir = path.join(config.appRoot, ".tails/src/controllers");
     this.pagesDir = path.join(config.appRoot, ".tails/src/pages");
+    console.log(path.join(config.appRoot, "config/routes.ts"));
     this.routesPath = path.join(config.appRoot, "config/routes.ts");
 
     this.config = config;
