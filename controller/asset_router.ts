@@ -7,6 +7,7 @@ import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
+import Module from "../modules/module.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -27,15 +28,17 @@ export default class AssetRouter {
       await this.setHMRAssetRoutes();
     }
 
-    this.setDefaultRoutes();
+    await this.setDefaultRoutes();
     await this.setPublicRoutes();
     this.setModuleRoutes();
   }
 
-  private setDefaultRoutes() {
+  private async setDefaultRoutes() {
+    const bootstrap = await this.fetchTailsAsset("./browser/bootstrap.js");
+
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
-      context.response.body = this.moduleHandler.bootstrap;
+      context.response.body = bootstrap;
     });
 
     this.router.get(this.config.mainJSPath, (context: Context) => {
@@ -54,7 +57,7 @@ export default class AssetRouter {
     for await (const { path: staticFilePath } of walk(publicDir)) {
       if (publicDir === staticFilePath) continue;
 
-      const file = await this.fetchAsset(staticFilePath);
+      const file = await this.fetchStaticAsset(staticFilePath);
       const route = staticFilePath.replace(publicDir, "");
 
       this.router.get(route, (context: Context) => {
@@ -66,24 +69,24 @@ export default class AssetRouter {
 
   private setModuleRoutes() {
     log.debug("JS Asset Routes:");
-    Object.keys(this.moduleHandler.modules).forEach((moduleKey) => {
-      const route = moduleKey.replace("/pages", "");
+    for (const key of this.moduleHandler.keys()) {
+      const route = key.replace("/pages", "");
       log.debug(`  ${route}`);
 
       this.router.get(route, (context: Context) => {
         try {
-          let module = this.moduleHandler.modules[moduleKey].module;
+          let source = (this.moduleHandler.get(key) as Module).source as string;
           if (this.config.mode === "development") {
-            module = injectHMR(moduleKey, module);
+            source = injectHMR(key, source);
           }
 
           context.response.type = getContentType(route);
-          context.response.body = module;
+          context.response.body = source;
         } catch (error) {
           log.error(error);
         }
       });
-    });
+    }
   }
 
   private handleHMR() {
@@ -97,7 +100,7 @@ export default class AssetRouter {
 
           const data = JSON.parse(event);
           if (data.type === "hotAccept" && util.isNEString(data.id)) {
-            const mod = this.moduleHandler.modules[data.id];
+            const mod = this.moduleHandler.get(data.id);
 
             if (mod) {
               const callback = async () => {
@@ -121,8 +124,8 @@ export default class AssetRouter {
   }
 
   private async setHMRAssetRoutes() {
-    const hmrData = await this.fetchAsset("./hmr/hmr.ts");
-    const eventData = await this.fetchAsset("./hmr/events.ts");
+    const hmrData = await this.fetchTailsAsset("./hmr/hmr.ts");
+    const eventData = await this.fetchTailsAsset("./hmr/events.ts");
 
     const hmrContent = await Deno.transpileOnly({
       "hmr.ts": hmrData,
@@ -140,7 +143,15 @@ export default class AssetRouter {
     });
   }
 
-  private async fetchAsset(pathName: string): Promise<string> {
+  private async fetchTailsAsset(pathName: string): Promise<string> {
+    const __dirname = path.dirname(new URL(import.meta.url).pathname);
+    console.log(path.join(__dirname, "..", pathName));
+
+    const data = await Deno.readFile(path.join(__dirname, "..", pathName));
+    return this.decoder.decode(data);
+  }
+
+  private async fetchStaticAsset(pathName: string): Promise<string> {
     const data = await Deno.readFile(pathName);
     return this.decoder.decode(data);
   }

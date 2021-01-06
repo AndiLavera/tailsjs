@@ -18,7 +18,7 @@ export const routes: Routes = {
     routes: [
       {
         page: "index",
-        ssg: true,
+        ssg: false,
         path: "/",
         controller: "test_controller",
         method: "show",

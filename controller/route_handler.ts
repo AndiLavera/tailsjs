@@ -144,9 +144,12 @@ export class RouteHandler {
         page,
         controller,
       };
-    } catch {
+    } catch (error) {
+      console.log(error);
+      // TODO: Possible for this to be a controller, not a page. Leaving
+      // the console.log for debugging reasonse for now.
       throw new Error(
-        `Could not load api route module: ${route.controller}. Path: ${pagePath}`,
+        `Could not load page: ${route.page}. Path: ${pagePath}`,
       );
     }
   }

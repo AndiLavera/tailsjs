@@ -1,13 +1,14 @@
-import { Modules } from "../types.ts";
+import Module from "../modules/module.ts";
 
 // TODO: Should not be undefined
-export function fetchHtml(page: string | undefined, modules: Modules) {
-  const cleanedPage = (page as string).replace(
+export function fetchHtml(
+  page: string,
+  modules: Map<string, Module>,
+) {
+  const cleanedPage = page.replace(
     /\.(jsx|mjs|tsx|ts|js?)/g,
     "",
   );
 
-  return modules[
-    `/pages/${cleanedPage}.js`
-  ].html;
+  return (modules.get(`/pages/${cleanedPage}.js`) as Module).html;
 }
