@@ -14,7 +14,9 @@ export async function transpileDirWithPlugins(
   pathname: string,
   walkOptions: WalkOptions,
 ): Promise<TranspiledModules> {
-  const modules = await walkDir(pathname, walkOptions);
+  const todoFakeCallback = async (pathname: string) => {};
+
+  const modules = await walkDir(pathname, todoFakeCallback, walkOptions);
   const transformedModules = await plugins.transform(modules);
   const transpiledModules = await transpile(transformedModules);
 
@@ -34,7 +36,7 @@ export async function transpileDirWithPlugins(
     }
   });
 
-  const pluginModules = await walkDir(pathname, {
+  const pluginModules = await walkDir(pathname, todoFakeCallback, {
     includeDirs,
     exts,
     skip,
@@ -52,6 +54,7 @@ export async function transpileDirWithPlugins(
 
 export async function walkDir(
   pathname: string,
+  callback: (pathname: string) => Promise<void>,
   walkOptions?: WalkOptions,
 ) {
   const modules: Record<string, string> = {};
@@ -65,8 +68,9 @@ export async function walkDir(
       for await (
         const { path: pathname } of walk(folderName, walkOptions)
       ) {
-        const data = await Deno.readFile(pathname);
-        modules[pathname] = decoder.decode(data);
+        await callback(pathname);
+        // const data = await Deno.readFile(pathname);
+        // modules[pathname] = decoder.decode(data);
       }
     }
   }

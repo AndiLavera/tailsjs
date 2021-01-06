@@ -8,6 +8,7 @@ import { RouteHandler } from "../controller/route_handler.ts";
 import { EventEmitter } from "../hmr/events.ts";
 import Module from "../modules/module.ts";
 import * as compiler from "../compiler/compiler.ts";
+import * as plugins from "../compiler/plugins.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
 import { Manifest, TranspiledModules } from "../types.ts";
@@ -49,8 +50,9 @@ export class ModuleHandler {
   }
 
   async build(staticRoutes: string[]) {
-    const compiledResults = await this.compile();
-    await this.setModules(compiledResults, staticRoutes);
+    // const compiledResults = await this.compile();
+    // await this.setModules(compiledResults, staticRoutes);
+    await this.loadModules(staticRoutes);
     await this.writeAll();
     await this.setDefaultComponents();
 
@@ -85,66 +87,18 @@ export class ModuleHandler {
     }
   }
 
-  async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
-    log.info("Start watching code changes...");
+  // private async compile(): Promise<TranspiledModules> {
+  //   const walkOptions = {
+  //     includeDirs: true,
+  //     exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
+  //     skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
+  //   };
 
-    const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
-    let reloading = false;
-
-    for await (const event of watch) {
-      if (event.kind === "access" || reloading) continue;
-
-      log.debug(`Event kind: ${event.kind}`);
-
-      if (event.kind !== "modify") continue;
-
-      reloading = true;
-      for (const path of event.paths) {
-        const startTime = performance.now();
-        const fileName = path.split("/").slice(-1)[0];
-
-        log.debug(`Processing ${fileName}`);
-        // Check if file was deleted
-        if (!existsFile(path)) continue;
-
-        // TODO: Possibly make this 2 event listeners
-        await this.recompile(path, staticRoutes);
-        await routeHandler.reloadModule(path);
-
-        const cleanPath = path
-          .replace(`${this.config.assetDir}`, "")
-          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
-
-        this.eventListeners.forEach((eventListener) => {
-          eventListener.emit(
-            `${event.kind}-${cleanPath}`,
-            cleanPath,
-          );
-        });
-
-        log.debug(
-          `Processing completed in ${
-            Math.round(performance.now() - startTime)
-          }ms`,
-        );
-      }
-
-      setTimeout(() => (reloading = false), 500);
-    }
-  }
-
-  private async compile(): Promise<TranspiledModules> {
-    const walkOptions = {
-      includeDirs: true,
-      exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
-      skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
-    };
-
-    return await compiler.transpileDirWithPlugins(
-      this.config.srcDir,
-      walkOptions,
-    );
-  }
+  //   return await compiler.transpileDirWithPlugins(
+  //     this.config.srcDir,
+  //     walkOptions,
+  //   );
+  // }
 
   private async setModules(
     compiledResults: TranspiledModules,
@@ -157,34 +111,118 @@ export class ModuleHandler {
       // TODO: Maybe iterate again and render
       // const html = await utils.renderSSGModule(moduleKey);
 
-      const module = new Module(
-        {
-          fullpath: key,
-          source: tmpModule.source,
-          map: tmpModule.map,
-          isStatic: renderer.isStatic(staticRoutes, key),
-          isPlugin: false,
-          writePath: `${this.appRoot}/.tails/src`,
-        },
-      );
+      const module = new Module({
+        fullpath: key,
+        source: tmpModule.source,
+        map: tmpModule.map,
+        isStatic: renderer.isStatic(staticRoutes, key),
+        isPlugin: false,
+        appRoot: this.appRoot,
+      });
 
       this.modules.set(cleanedKey, module);
     }
 
     for await (const key of Object.keys(compiledResults.plugins)) {
-      const tmpModule = compiledResults.plugins[key];
       const cleanedKey = utils.cleanKey(key, this.config.srcDir);
 
-      const module = new Module(
-        {
-          fullpath: key,
-          source: tmpModule,
-          isPlugin: true,
-        },
-      );
+      const module = new Module({
+        fullpath: key,
+        source: compiledResults.plugins[key],
+        isPlugin: true,
+        appRoot: this.appRoot,
+      });
 
       this.modules.set(cleanedKey, module);
     }
+  }
+
+  // TODO: Rename to compile
+  private async loadModules(staticRoutes: string[]) {
+    const decoder = new TextDecoder();
+    const walkOptions = {
+      includeDirs: true,
+      exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
+      skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
+    };
+
+    /**
+     * Handles fetching the file, creating a new modules, transpiling it
+     * & setting it into `this.modules`.
+     *
+     * @param pathname
+     */
+    const loadModule = async (pathname: string) => {
+      const data = await Deno.readFile(pathname);
+      const cleanedKey = utils.cleanKey(pathname, this.config.srcDir);
+
+      const module = new Module({
+        fullpath: pathname,
+        content: decoder.decode(data),
+        isStatic: renderer.isStatic(staticRoutes, cleanedKey),
+        isPlugin: false,
+        appRoot: this.appRoot,
+      });
+
+      const key = await module.transpile();
+      this.modules.set(key, module);
+    };
+
+    await compiler.walkDir(
+      this.config.srcDir,
+      loadModule,
+      walkOptions,
+    );
+
+    let exts: string[] = [];
+    let skip: RegExp[] = [];
+    const includeDirs = true;
+
+    plugins.forEach(({ walkOptions }) => {
+      if (walkOptions) {
+        if (walkOptions.exts) {
+          exts = exts.concat(walkOptions.exts);
+        }
+
+        if (walkOptions.skip) {
+          skip = skip.concat(walkOptions.skip);
+        }
+      }
+    });
+
+    /**
+     * Handles fetching the file, creating a new modules, transpiling it
+     * & setting it into `this.modules`.
+     *
+     * @param pathname
+     */
+    const loadPlugin = async (pathname: string) => {
+      const data = await Deno.readFile(pathname);
+      const cleanedKey = utils.cleanKey(pathname, this.config.srcDir);
+
+      const module = new Module({
+        fullpath: pathname,
+        content: decoder.decode(data),
+        isStatic: renderer.isStatic(staticRoutes, cleanedKey),
+        isPlugin: true,
+        appRoot: this.appRoot,
+      });
+
+      const key = await module.transpile();
+      this.modules.set(key, module);
+    };
+
+    const pluginWalkOptions = {
+      includeDirs,
+      exts,
+      skip,
+    };
+
+    await compiler.walkDir(
+      this.config.srcDir,
+      loadPlugin,
+      pluginWalkOptions,
+    );
   }
 
   private async loadManifest(): Promise<void> {
@@ -248,7 +286,7 @@ export class ModuleHandler {
       html: module.html,
     };
 
-    await module.write(writePath);
+    await module.write();
   }
 
   // TODO: Move into compiler?
@@ -390,5 +428,53 @@ export class ModuleHandler {
     );
 
     return decoder.decode(data);
+  }
+
+  async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
+    log.info("Start watching code changes...");
+
+    const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
+    let reloading = false;
+
+    for await (const event of watch) {
+      if (event.kind === "access" || reloading) continue;
+
+      log.debug(`Event kind: ${event.kind}`);
+
+      if (event.kind !== "modify") continue;
+
+      reloading = true;
+      for (const path of event.paths) {
+        const startTime = performance.now();
+        const fileName = path.split("/").slice(-1)[0];
+
+        log.debug(`Processing ${fileName}`);
+        // Check if file was deleted
+        if (!existsFile(path)) continue;
+
+        // TODO: Possibly make this 2 event listeners
+        await this.recompile(path, staticRoutes);
+        await routeHandler.reloadModule(path);
+
+        const cleanPath = path
+          .replace(`${this.config.assetDir}`, "")
+          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
+
+        this.eventListeners.forEach((eventListener) => {
+          eventListener.emit(
+            `${event.kind}-${cleanPath}`,
+            cleanPath,
+          );
+        });
+
+        log.debug(
+          `Processing completed in ${
+            Math.round(performance.now() - startTime)
+          }ms`,
+        );
+      }
+
+      setTimeout(() => (reloading = false), 500);
+    }
   }
 }
