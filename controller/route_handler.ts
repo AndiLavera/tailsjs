@@ -83,6 +83,7 @@ export class RouteHandler {
 
   async prepareRouter(): Promise<void> {
     try {
+      console.log(this.routesPath);
       const { routes } = await import(this.routesPath);
       this.routes = routes;
     } catch (error) {
