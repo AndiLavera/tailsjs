@@ -1,22 +1,12 @@
-import { ComponentType, Router as ServerRouter } from "../deps.ts";
+import { Router as ServerRouter } from "../deps.ts";
 import { Configuration } from "../core/configuration.ts";
 import { path } from "../std.ts";
-import { APIRoute, Routes, WebRoute } from "../types.ts";
+import { APIModules, Routes, WebModules } from "../types.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
-import APIRouter from "./api_router.ts";
+import APIRouter, { loadAPIModule } from "./api_router.ts";
 import AssetRouter from "./asset_router.ts";
-import Controller from "./controller.ts";
-import { WebRouter } from "./web_router.ts";
-import { dynamicImport } from "../utils/dynamicImport.ts";
-
-interface WebModule {
-  // deno-lint-ignore no-explicit-any
-  page: ComponentType<any>;
-  controller: new () => Controller;
-}
-
-export type APIModules = Record<string, new () => Controller>;
-export type WebModules = Record<string, WebModule>;
+import { loadWebModule, WebRouter } from "./web_router.ts";
+import { reModuleExt } from "../core/utils.ts";
 
 export class RouteHandler {
   routes: Routes;
@@ -50,8 +40,8 @@ export class RouteHandler {
     this.moduleHandler = moduleHandler;
 
     this.assetRouter = new AssetRouter(config, moduleHandler);
-    this.apiRouter = new APIRouter(config, moduleHandler);
-    this.webRouter = new WebRouter(config, moduleHandler);
+    this.apiRouter = new APIRouter(config, moduleHandler, this.apiModules);
+    this.webRouter = new WebRouter(config, moduleHandler, this.webModules);
 
     this.routes = {
       api: {
@@ -92,8 +82,8 @@ export class RouteHandler {
 
   async build(): Promise<void> {
     await this.loadModules();
-    this.apiRouter.setRoutes(this.routes.api, this.apiModules);
-    this.webRouter.setRoutes(this.routes.web, this.webModules);
+    this.apiRouter.setRoutes(this.routes.api);
+    this.webRouter.setRoutes(this.routes.web);
     await this.assetRouter.setRoutes();
 
     this.serverRouters.push(this.apiRouter.router);
@@ -101,118 +91,60 @@ export class RouteHandler {
     this.serverRouters.push(this.assetRouter.router);
   }
 
-  async loadAPIModule(route: APIRoute) {
-    const importPath = path.join(
-      this.controllersDir,
-      `${route.controller}.js`,
-    );
-
-    try {
-      const controller = (await dynamicImport("file://" + importPath)).default;
-      this.apiModules[route.path] = controller;
-    } catch (error) {
-      console.log(error);
-      throw new Error(
-        `Could not load api route module: ${route.controller}. Path: ${importPath}`,
-      );
-    }
-  }
-
-  async loadWebModule(route: WebRoute) {
-    const { controller: controllerName, method, page } = route;
-
-    const pagePath = path.join(
-      this.pagesDir,
-      `${page}.js`,
-    );
-
-    let controllerPath;
-    if (controllerName && method) {
-      controllerPath = path.join(
-        this.controllersDir,
-        `${controllerName}.js`,
-      );
-    }
-
-    let controller;
-    try {
-      const page = (await dynamicImport("file://" + pagePath)).default;
-      if (controllerPath) {
-        controller = (await dynamicImport("file://" + controllerPath)).default;
-      }
-
-      this.webModules[route.path] = {
-        page,
-        controller,
-      };
-    } catch (error) {
-      console.log(error);
-      // TODO: Possible for this to be a controller, not a page. Leaving
-      // the console.log for debugging reasonse for now.
-      throw new Error(
-        `Could not load page: ${route.page}. Path: ${pagePath}`,
-      );
-    }
-  }
-
   async reloadModule(pathname: string) {
-    const filePath = pathname.replace(this.config.srcDir, "");
-    // deno-lint-ignore no-explicit-any
-    const importedModules: Record<string, any> = {};
+    const srcPath = pathname
+      .replace(this.config.srcDir, "")
+      .replace(reModuleExt, ".js");
 
-    if (filePath.includes("/controllers")) {
+    if (srcPath.includes("/controllers")) {
       for await (const route of this.routes.api.routes) {
-        if (
-          filePath.includes(route.controller) && !importedModules[route.path]
-        ) {
-          await this.loadAPIModule(route);
-          importedModules[route.controller] = this.apiModules[route.path];
-        } else if (importedModules[route.path]) {
-          this.apiModules[route.path] = importedModules[route.controller];
+        const { controller, path } = route;
+
+        if (srcPath.includes(controller)) {
+          delete this.apiModules[path];
         }
       }
 
       for await (const route of this.routes.web.routes) {
-        const { controller } = route;
+        const { controller, path } = route;
 
-        if (
-          controller &&
-          filePath.includes(controller) &&
-          !importedModules[controller]
-        ) {
-          await this.loadWebModule(route);
-        } else if (importedModules[`${controller}`]) {
-          this.webModules[route.path].controller =
-            importedModules[`${controller}`];
+        if (controller && srcPath.includes(controller)) {
+          delete this.webModules[path];
         }
       }
     }
 
-    if (filePath.includes("/pages")) {
+    if (srcPath.includes("/pages")) {
       for await (const route of this.routes.web.routes) {
-        const { controller } = route;
+        const { page, path } = route;
 
-        if (controller && filePath.includes(controller)) {
-          this.loadWebModule(route);
+        if (srcPath.includes(page)) {
+          delete this.webModules[path];
         }
       }
     }
   }
 
   private async loadModules() {
-    await this.loadAPIModules();
-    await this.loadWebModules();
+    if (this.config.mode === "production") {
+      await this.loadAPIModules();
+      await this.loadWebModules();
+    }
   }
 
   private async loadWebModules() {
     for await (const route of this.routes.web.routes) {
-      await this.loadWebModule(route);
+      await loadWebModule(route, this.moduleHandler, this.webModules);
     }
   }
 
+  /**
+   * Handles iterating over api routes & importing each module.
+   * Used for starting the production server.
+   */
   private async loadAPIModules() {
     for await (const route of this.routes.api.routes) {
-      await this.loadAPIModule(route);
+      await loadAPIModule(route, this.moduleHandler, this.apiModules);
     }
   }
 }

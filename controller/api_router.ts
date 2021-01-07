@@ -1,6 +1,6 @@
 import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
-import { APIRoutes } from "../types.ts";
+import { APIRoute, APIRoutes, Routes } from "../types.ts";
 import { APIModules } from "./route_handler.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
@@ -10,34 +10,74 @@ export default class APIRouter {
   readonly router: OakRouter;
   private readonly config: Configuration;
   private readonly moduleHandler: ModuleHandler;
+  private readonly apiModules: APIModules;
 
-  constructor(config: Configuration, moduleHandler: ModuleHandler) {
+  constructor(
+    config: Configuration,
+    moduleHandler: ModuleHandler,
+    apiModules: APIModules,
+  ) {
     this.config = config;
+    this.apiModules = apiModules;
     this.moduleHandler = moduleHandler;
     this.router = new OakRouter();
   }
 
-  setRoutes(apiRoutes: APIRoutes, apiModules: APIModules) {
+  setRoutes(apiRoutes: APIRoutes) {
+    const apiModules = this.apiModules;
+    const moduleHandler = this.moduleHandler;
+
     setStaticMiddleware(this.router);
     setMiddleware(apiRoutes.middleware, this.router);
 
     apiRoutes.routes.forEach((route) => {
       const { method, httpMethod, path } = route;
 
+      // TODO: Other http methods
       switch (httpMethod) {
         case "GET":
           // TODO: Set params and other important info
-          this.router.get(path, (context: Context) => {
-            const module = apiModules[path];
-            const controller = new module();
+          this.router.get(path, async (context: Context) => {
+            try {
+              console.log("router api modules");
+              console.log(apiModules);
+              let module = apiModules[path];
+              if (!module) {
+                module = await loadAPIModule(route, moduleHandler, apiModules);
+              }
 
-            context.response.type = "application/json";
-            context.response.body = controller[method]();
+              const controller = new module();
+
+              context.response.type = "application/json";
+              context.response.body = controller[method]();
+            } catch (err) {
+              console.log(err);
+            }
           });
           break;
         case "POST":
           break;
       }
     });
+  }
+}
+
+export async function loadAPIModule(
+  route: APIRoute,
+  moduleHandler: ModuleHandler,
+  apiModules: APIModules,
+) {
+  try {
+    const module = moduleHandler.modules.get(
+      `/controllers/${route.controller}.js`,
+    );
+    const controller = (await module?.import()).default;
+    apiModules[route.path] = controller;
+    return controller;
+  } catch (error) {
+    console.log(error);
+    throw new Error(
+      `Could not load api route module: ${route.controller}.`,
+    );
   }
 }
