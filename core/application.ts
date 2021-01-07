@@ -71,7 +71,7 @@ export class Application {
       `Project loaded in ${Math.round(performance.now() - startTime)}ms`,
     );
 
-    this.moduleHandler.watch(this.routeHandler, staticRoutes);
+    this.moduleHandler.watch(this.routeHandler);
   }
 
   /**

@@ -1,5 +1,8 @@
 import { WalkOptions } from "https://deno.land/std@0.78.0/fs/walk.ts";
-import { Context } from "./deps.ts";
+import Controller from "./controller/controller.ts";
+import { ComponentType, Context } from "./deps.ts";
+
+// TODO: Document types
 
 type HTTPMethod =
   | "CONNECT"
@@ -40,6 +43,15 @@ export interface APIRoutes {
   middleware: Middleware;
   routes: APIRoute[];
 }
+
+export interface WebModule {
+  // deno-lint-ignore no-explicit-any
+  page: ComponentType<any>;
+  controller: new () => Controller;
+}
+
+export type APIModules = Record<string, new () => Controller>;
+export type WebModules = Record<string, WebModule>;
 
 export type Routes = {
   api: APIRoutes;

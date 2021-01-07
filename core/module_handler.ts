@@ -48,9 +48,7 @@ export class ModuleHandler {
   }
 
   async build(staticRoutes: string[]) {
-    // const compiledResults = await this.compile();
-    // await this.setModules(compiledResults, staticRoutes);
-    await this.loadModules(staticRoutes);
+    await this.compile(staticRoutes);
     await this.writeAll();
     await this.setDefaultComponents();
 
@@ -85,8 +83,7 @@ export class ModuleHandler {
     }
   }
 
-  // TODO: Rename to compile
-  private async loadModules(staticRoutes: string[]) {
+  private async compile(staticRoutes: string[]) {
     const decoder = new TextDecoder();
     const walkOptions = {
       includeDirs: true,
@@ -237,59 +234,6 @@ export class ModuleHandler {
     await module.write();
   }
 
-  // TODO: Move into compiler?
-  private async recompile(filePath: string, staticRoutes: string[]) {
-    const key = utils.cleanKey(filePath, this.config.srcDir);
-    const module = this.modules.get(key);
-
-    if (!module) {
-      throw new Error(
-        `WatchError: Module could not be reloaded.
-        Path: ${filePath}
-        Key: ${key}
-        `,
-      );
-    }
-
-    await module.retranspile();
-    await module.write();
-
-    Deno.exit(5);
-
-    // const modules: Record<string, string> = {};
-    // const decoder = new TextDecoder("utf-8");
-    // const data = await Deno.readFile(filePath);
-
-    // modules[key] = decoder.decode(data);
-
-    // const transpiled = await Deno.transpileOnly(modules);
-
-    // // let html;
-    // // if (filePath.includes("/pages")) {
-    // //   html = await this.renderHTML(filePath, staticRoutes);
-    // // }
-
-    // const JSKey = key.replace(/\.(jsx|mjs|tsx|ts|js?)/g, ".js");
-    // const sourceMap = transpiled[key].map;
-
-    // this.set(
-    //   JSKey,
-    //   transpiled[key].source,
-    //   html,
-    // );
-    // if (sourceMap) {
-    //   this.set(
-    //     `${JSKey}.map`,
-    //     sourceMap,
-    //   );
-    // }
-
-    // this.rewriteImportPath(JSKey);
-    // this.rewriteImportPath(`${JSKey}.map`);
-    // await this.writeModule(JSKey);
-    // await this.writeModule(`${JSKey}.map`);
-  }
-
   private async renderHTML(filePath: string, staticRoutes: string[]) {
     if (
       filePath.includes("_app") || filePath.includes("_document")
@@ -345,7 +289,7 @@ export class ModuleHandler {
     }
   }
 
-  async watch(routeHandler: RouteHandler, staticRoutes: string[]) {
+  async watch(routeHandler: RouteHandler) {
     log.info("Start watching code changes...");
 
     const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
@@ -355,20 +299,20 @@ export class ModuleHandler {
       if (event.kind === "access" || reloading) continue;
 
       log.debug(`Event kind: ${event.kind}`);
-
       if (event.kind !== "modify") continue;
 
       reloading = true;
       for (const path of event.paths) {
         const startTime = performance.now();
         const fileName = path.split("/").slice(-1)[0];
-
-        log.debug(`Processing ${fileName}`);
+        // TODO: Remove file from modules if deleted?
         // Check if file was deleted
         if (!existsFile(path)) continue;
 
+        log.debug(`Processing ${fileName}`);
+
         // TODO: Possibly make this 2 event listeners
-        await this.recompile(path, staticRoutes);
+        await this.recompile(path);
         await routeHandler.reloadModule(path);
 
         // TODO: utils.cleanKey?
@@ -392,5 +336,22 @@ export class ModuleHandler {
 
       setTimeout(() => (reloading = false), 500);
     }
+  }
+
+  private async recompile(filePath: string) {
+    const key = utils.cleanKey(filePath, this.config.srcDir);
+    const module = this.modules.get(key);
+
+    if (!module) {
+      throw new Error(
+        `WatchError: Module could not be reloaded.
+        Path: ${filePath}
+        Key: ${key}
+        `,
+      );
+    }
+
+    await module.retranspile();
+    await module.write();
   }
 }
