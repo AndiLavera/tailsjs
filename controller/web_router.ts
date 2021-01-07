@@ -1,10 +1,9 @@
 import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Context, Router as OakRouter } from "../deps.ts";
-import { WebRoute, WebRoutes } from "../types.ts";
+import { WebModules, WebRoute, WebRoutes } from "../types.ts";
 import { generateHTML } from "../utils/generateHTML.tsx";
 import { fetchHtml } from "../utils/fetchHTML.ts";
-import { WebModules } from "./route_handler.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
 
 export class WebRouter {
