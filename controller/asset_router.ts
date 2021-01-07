@@ -144,6 +144,7 @@ export default class AssetRouter {
   }
 
   private async fetchTailsAsset(pathname: string): Promise<string> {
+    // TODO: Convert to deno.land url
     const file = await cache(
       "https://raw.githubusercontent.com/andrewc910/tailsjs/master" + pathname,
     );
