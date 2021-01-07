@@ -38,8 +38,6 @@ export default class APIRouter {
           // TODO: Set params and other important info
           this.router.get(path, async (context: Context) => {
             try {
-              console.log("router api modules");
-              console.log(apiModules);
               let module = apiModules[path];
               if (!module) {
                 module = await loadAPIModule(route, moduleHandler, apiModules);
