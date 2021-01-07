@@ -2,7 +2,7 @@ import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../core/module_handler.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Context } from "../deps.ts";
-import { path, walk } from "../std.ts";
+import { cache, path, walk } from "../std.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
@@ -34,7 +34,7 @@ export default class AssetRouter {
   }
 
   private async setDefaultRoutes() {
-    const bootstrap = await this.fetchTailsAsset("./browser/bootstrap.js");
+    const bootstrap = await this.fetchTailsAsset("/browser/bootstrap.js");
 
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";
@@ -124,8 +124,8 @@ export default class AssetRouter {
   }
 
   private async setHMRAssetRoutes() {
-    const hmrData = await this.fetchTailsAsset("./hmr/hmr.ts");
-    const eventData = await this.fetchTailsAsset("./hmr/events.ts");
+    const hmrData = await this.fetchTailsAsset("/hmr/hmr.ts");
+    const eventData = await this.fetchTailsAsset("/hmr/events.ts");
 
     const hmrContent = await Deno.transpileOnly({
       "hmr.ts": hmrData,
@@ -143,20 +143,12 @@ export default class AssetRouter {
     });
   }
 
-  private async fetchTailsAsset(pathName: string): Promise<string> {
-    const __dirname = path.dirname(import.meta.url);
-    console.log("HEEEERREEE");
-    console.log(import.meta.url);
-    console.log(__dirname);
-    // const __dirname = path.dirname(new URL(import.meta.url).pathname);
-    console.log(path.join(__dirname, "..", pathName));
-    console.log("\n\n\n");
-
-    const data = await Deno.readFile(
-      "file:///home/andrew/workspace/js/tails/hmr/hmr.ts",
+  private async fetchTailsAsset(pathname: string): Promise<string> {
+    const file = await cache(
+      "https://raw.githubusercontent.com/andrewc910/tailsjs/master" + pathname,
     );
-    console.log("past");
-    return this.decoder.decode(data);
+
+    return await Deno.readTextFile(file.path);
   }
 
   private async fetchStaticAsset(pathName: string): Promise<string> {
