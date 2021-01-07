@@ -83,8 +83,9 @@ export class RouteHandler {
 
   async prepareRouter(): Promise<void> {
     try {
-      console.log(this.routesPath);
-      const { routes } = await import(this.routesPath);
+      const file = path.join("file://", this.routesPath);
+      console.log(file);
+      const { routes } = await import(file);
       this.routes = routes;
     } catch (error) {
       console.log(error);
