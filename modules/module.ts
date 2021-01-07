@@ -78,11 +78,11 @@ export default class Module {
   // deno-lint-ignore no-explicit-any
   async import(): Promise<ComponentType<any>> {
     if (this.importedModule) {
-      this.importedModule = await dynamicImport(this.fullPath);
+      this.importedModule = await dynamicImport("file://" + this.fullPath);
       return this.importedModule;
     }
 
-    this.importedModule = await import(this.writePath as string);
+    this.importedModule = await import("file://" + this.writePath as string);
     return this.importedModule;
   }
 

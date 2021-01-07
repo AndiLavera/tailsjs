@@ -44,7 +44,6 @@ export class RouteHandler {
 
     this.controllersDir = path.join(config.appRoot, ".tails/src/controllers");
     this.pagesDir = path.join(config.appRoot, ".tails/src/pages");
-    console.log(path.join(config.appRoot, "config/routes.ts"));
     this.routesPath = path.join(config.appRoot, "config/routes.ts");
 
     this.config = config;
@@ -83,9 +82,10 @@ export class RouteHandler {
 
   async prepareRouter(): Promise<void> {
     try {
-      const { routes } = await import(this.routesPath);
+      const { routes } = await import("file://" + this.routesPath);
       this.routes = routes;
     } catch (error) {
+      console.log(error);
       throw new Error("Could not find routes file.");
     }
   }
@@ -108,7 +108,7 @@ export class RouteHandler {
     );
 
     try {
-      const controller = (await dynamicImport(importPath)).default;
+      const controller = (await dynamicImport("file://" + importPath)).default;
       this.apiModules[route.path] = controller;
     } catch (error) {
       console.log(error);
@@ -136,9 +136,9 @@ export class RouteHandler {
 
     let controller;
     try {
-      const page = (await dynamicImport(pagePath)).default;
+      const page = (await dynamicImport("file://" + pagePath)).default;
       if (controllerPath) {
-        controller = (await dynamicImport(controllerPath)).default;
+        controller = (await dynamicImport("file://" + controllerPath)).default;
       }
 
       this.webModules[route.path] = {
