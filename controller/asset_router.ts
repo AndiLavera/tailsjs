@@ -145,10 +145,17 @@ export default class AssetRouter {
 
   private async fetchTailsAsset(pathName: string): Promise<string> {
     const __dirname = path.dirname(import.meta.url);
+    console.log("HEEEERREEE");
+    console.log(import.meta.url);
+    console.log(__dirname);
     // const __dirname = path.dirname(new URL(import.meta.url).pathname);
     console.log(path.join(__dirname, "..", pathName));
+    console.log("\n\n\n");
 
-    const data = await Deno.readFile(path.join(__dirname, "..", pathName));
+    const data = await Deno.readFile(
+      "file:///home/andrew/workspace/js/tails/hmr/hmr.ts",
+    );
+    console.log("past");
     return this.decoder.decode(data);
   }
 
