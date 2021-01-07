@@ -44,7 +44,6 @@ export class RouteHandler {
 
     this.controllersDir = path.join(config.appRoot, ".tails/src/controllers");
     this.pagesDir = path.join(config.appRoot, ".tails/src/pages");
-    console.log(path.join(config.appRoot, "config/routes.ts"));
     this.routesPath = path.join(config.appRoot, "config/routes.ts");
 
     this.config = config;
@@ -83,9 +82,7 @@ export class RouteHandler {
 
   async prepareRouter(): Promise<void> {
     try {
-      const file = path.join("file://", this.routesPath);
-      console.log(file);
-      const { routes } = await import(file);
+      const { routes } = await import("file://" + this.routesPath);
       this.routes = routes;
     } catch (error) {
       console.log(error);
