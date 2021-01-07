@@ -371,6 +371,7 @@ export class ModuleHandler {
         await this.recompile(path, staticRoutes);
         await routeHandler.reloadModule(path);
 
+        // TODO: utils.cleanKey?
         const cleanPath = path
           .replace(`${this.config.assetDir}`, "")
           .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");

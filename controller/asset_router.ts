@@ -144,7 +144,8 @@ export default class AssetRouter {
   }
 
   private async fetchTailsAsset(pathName: string): Promise<string> {
-    const __dirname = path.dirname(new URL(import.meta.url).pathname);
+    const __dirname = path.dirname(import.meta.url);
+    // const __dirname = path.dirname(new URL(import.meta.url).pathname);
     console.log(path.join(__dirname, "..", pathName));
 
     const data = await Deno.readFile(path.join(__dirname, "..", pathName));
