@@ -1,6 +1,6 @@
-import { Routes } from "../../../types.ts";
+// import { Routes } from "https://denopkg.com/andrewc910/tailsjs@master/types.ts";
 
-export const routes: Routes = {
+const routes = {
   api: {
     middleware: [],
     routes: [
@@ -30,3 +30,5 @@ export const routes: Routes = {
     ],
   },
 };
+
+export default routes;

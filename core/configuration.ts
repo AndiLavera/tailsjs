@@ -48,7 +48,7 @@ export class Configuration {
   readonly reactDomUrl: string;
   readonly importMap: Readonly<{ imports: Record<string, string> }>;
 
-  private readonly CONFIG_FILES: Array<string>;
+  // private readonly CONFIG_FILES: Array<string>;
 
   constructor(
     appDir: string,
@@ -81,10 +81,10 @@ export class Configuration {
     this.ssr = {
       fallback: "_fallback.html",
     };
-    this.CONFIG_FILES = [
-      `config/config.${mode}.ts`,
-      `config/config.${mode}.js`,
-    ];
+    // this.CONFIG_FILES = [
+    //   `config/config.${mode}.ts`,
+    //   `config/config.${mode}.js`,
+    // ];
   }
 
   // TODO: This is bugged
@@ -164,17 +164,28 @@ export class Configuration {
   }
 
   private async loadConfigFiles(config: Record<string, any>) {
-    for (const name of this.CONFIG_FILES) {
-      const configPath = path.join(this.appRoot, name);
-      if (existsFileSync(configPath)) {
-        const { default: conf } = await import("file://" + configPath);
+    // for (const name of this.CONFIG_FILES) {
+    //   const configPath = path.join(this.appRoot, name);
+    //   if (existsFileSync(configPath)) {
+    //     const { default: conf } = await import("file://" + configPath);
 
-        if (util.isPlainObject(conf)) {
-          Object.assign(config, conf);
-          Object.assign(this, { __file: name });
-        }
-        break;
+    //     if (util.isPlainObject(conf)) {
+    //       Object.assign(config, conf);
+    //       Object.assign(this, { __file: name });
+    //     }
+    //     break;
+    //   }
+    // }
+    const configPath = path.join(this.appRoot, "config/config.development.ts");
+    if (existsFileSync(configPath)) {
+      const { default: conf } = await import("file://" + configPath);
+
+      if (util.isPlainObject(conf)) {
+        Object.assign(config, conf);
+        Object.assign(this, { __file: "config.development.ts" });
       }
+    } else {
+      log.debug("Configuration file not found. Skipping");
     }
   }
 
