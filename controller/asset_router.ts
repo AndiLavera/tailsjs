@@ -3,7 +3,7 @@ import { ModuleHandler } from "../core/module_handler.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Context } from "../deps.ts";
 import { path, walk } from "../std.ts";
-import { cache } from "https://deno.land/x/cache/mod.ts";
+import { cache } from "https://deno.land/x/cache@0.2.9/mod.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";

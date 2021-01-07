@@ -106,9 +106,9 @@ async function main() {
     log.setLevel(logLevel);
   }
 
-  const { default: cmd } = await import(`./cli/dev.ts`);
+  const { default: cmd } = await import(`./cli/${command}.ts`);
   if (command === "upgrade") {
-    // await cmd(argOptions.v || argOptions.version || "latest");
+    await cmd(argOptions.v || argOptions.version || "latest");
   } else {
     const appDir = path.resolve(args[0] || ".");
     if (command !== "init" && !existsDirSync(appDir)) {

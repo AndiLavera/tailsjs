@@ -1,4 +1,4 @@
-import { convert as cssTransform } from "https://esm.sh/@americanexpress/css-to-js@1.0.1";
+import { cssTransform } from "../../deps.ts";
 import { CompilerPlugin } from "../../types.ts";
 
 const defaultPlugin: CompilerPlugin = {

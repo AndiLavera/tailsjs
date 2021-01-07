@@ -1,4 +1,5 @@
-// import { Routes } from "https://denopkg.com/andrewc910/tailsjs@master/types.ts";
+// import { Routes } from "https://deno.land/x/tails@v0.1.1/types.ts";
+// TODO: Would be nice to make this type safe...
 
 const routes = {
   api: {

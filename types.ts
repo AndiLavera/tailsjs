@@ -1,4 +1,4 @@
-import { WalkOptions } from "https://deno.land/std@0.78.0/fs/walk.ts";
+import { WalkOptions } from "./std.ts";
 import Controller from "./controller/controller.ts";
 import { ComponentType, Context } from "./deps.ts";
 

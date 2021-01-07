@@ -1,4 +1,4 @@
-import { WalkOptions } from "https://deno.land/std@0.78.0/fs/walk.ts";
+import { WalkOptions } from "../std.ts";
 import { path, walk } from "../std.ts";
 
 export async function walkDir(

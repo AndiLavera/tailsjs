@@ -1,4 +1,3 @@
-import { render } from "../compiler/compiler.old.ts";
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
@@ -255,13 +254,14 @@ export class ModuleHandler {
       path.join(pagesDir, "_document.tsx")
     );
 
+    // TODO:
     // The `Math.random()` is to get around Deno's caching system
     // See: https://github.com/denoland/deno/issues/6946
-    return await render(
-      `${filePath}?version=${Math.random() + Math.random()}`,
-      App,
-      Document,
-    );
+    // return await render(
+    //   `${filePath}?version=${Math.random() + Math.random()}`,
+    //   App,
+    //   Document,
+    // );
   }
 
   /**
