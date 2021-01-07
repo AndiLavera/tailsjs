@@ -120,8 +120,6 @@ export class Configuration {
       return path.join(this.appRoot, "src");
     }
 
-    // TODO: production should be:
-    // `${this.appRoot}${this.outputDir}/src
     return path.join(this.appRoot, ".tails", "src");
   }
 

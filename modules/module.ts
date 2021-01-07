@@ -70,11 +70,6 @@ export default class Module {
     return this.importedModule || this.import();
   }
 
-  // TODO: Any?
-  set module(module: any) {
-    this.importedModule = module;
-  }
-
   async import() {
     if (this.importedModule) {
       this.importedModule = await dynamicImport(
@@ -137,7 +132,6 @@ export default class Module {
   }
 
   async retranspile() {
-    // TODO: Null importedModule
     await this.loadFile();
     await this.transpile();
   }

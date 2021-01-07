@@ -1,6 +1,5 @@
 import Module from "../modules/module.ts";
 
-// TODO: Should not be undefined
 export function fetchHtml(
   page: string,
   modules: Map<string, Module>,

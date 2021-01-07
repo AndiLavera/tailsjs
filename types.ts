@@ -58,7 +58,6 @@ export type Routes = {
   web: WebRoutes;
 };
 
-// TODO: any
 export interface Modules {
   [key: string]: {
     module: string;

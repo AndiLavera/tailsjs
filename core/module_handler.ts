@@ -188,8 +188,7 @@ export class ModuleHandler {
     Object.keys(this.manifest)
       .forEach((key) => {
         const { module, html } = this.manifest[key];
-        // TODO
-        // this.set(key, module, html);
+        // TODO: this.set(key, module, html);
       });
   }
 

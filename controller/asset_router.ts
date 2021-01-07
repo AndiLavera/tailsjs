@@ -9,6 +9,7 @@ import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
 import Module from "../modules/module.ts";
+import { version } from "../version.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -145,9 +146,8 @@ export default class AssetRouter {
   }
 
   private async fetchTailsAsset(pathname: string): Promise<string> {
-    // TODO: Convert to deno.land url
     const file = await cache(
-      "https://raw.githubusercontent.com/andrewc910/tailsjs/master" + pathname,
+      "https://deno.land/x/tails@v" + version + pathname,
     );
 
     return await Deno.readTextFile(file.path);
