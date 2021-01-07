@@ -108,7 +108,7 @@ export class RouteHandler {
     );
 
     try {
-      const controller = (await dynamicImport(importPath)).default;
+      const controller = (await dynamicImport("file://" + importPath)).default;
       this.apiModules[route.path] = controller;
     } catch (error) {
       console.log(error);
@@ -136,9 +136,9 @@ export class RouteHandler {
 
     let controller;
     try {
-      const page = (await dynamicImport(pagePath)).default;
+      const page = (await dynamicImport("file://" + pagePath)).default;
       if (controllerPath) {
-        controller = (await dynamicImport(controllerPath)).default;
+        controller = (await dynamicImport("file://" + controllerPath)).default;
       }
 
       this.webModules[route.path] = {
