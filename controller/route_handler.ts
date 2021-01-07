@@ -7,6 +7,7 @@ import APIRouter, { loadAPIModule } from "./api_router.ts";
 import AssetRouter from "./asset_router.ts";
 import { loadWebModule, WebRouter } from "./web_router.ts";
 import { reModuleExt } from "../core/utils.ts";
+import { existsFileSync } from "../fs.ts";
 
 export class RouteHandler {
   routes: Routes;
@@ -14,7 +15,6 @@ export class RouteHandler {
   readonly apiModules: APIModules;
   readonly webModules: WebModules;
   readonly serverRouters: ServerRouter[];
-  readonly routesPath: string;
   readonly controllersDir: string;
   readonly pagesDir: string;
 
@@ -34,7 +34,6 @@ export class RouteHandler {
 
     this.controllersDir = path.join(config.appRoot, ".tails/src/controllers");
     this.pagesDir = path.join(config.appRoot, ".tails/src/pages");
-    this.routesPath = path.join(config.appRoot, "config/routes.ts");
 
     this.config = config;
     this.moduleHandler = moduleHandler;
@@ -71,12 +70,14 @@ export class RouteHandler {
   }
 
   async prepareRouter(): Promise<void> {
-    try {
-      const { routes } = await import("file://" + this.routesPath);
+    const routePath = path.join(this.config.appRoot, "config/routes.ts");
+    if (existsFileSync(routePath)) {
+      const { default: routes } = await import("file://" + routePath);
       this.routes = routes;
-    } catch (error) {
-      console.log(error);
-      throw new Error("Could not find routes file.");
+    } else {
+      throw new Error(
+        "Could not find routes file. Should be found at config/routes.ts",
+      );
     }
   }
 

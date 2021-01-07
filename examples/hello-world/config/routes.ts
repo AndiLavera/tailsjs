@@ -1,6 +1,7 @@
-import { Routes } from "../../../types.ts";
+// import { Routes } from "https://deno.land/x/tails@v0.1.1/types.ts";
+// TODO: Would be nice to make this type safe...
 
-export const routes: Routes = {
+const routes = {
   api: {
     middleware: [],
     routes: [
@@ -30,3 +31,5 @@ export const routes: Routes = {
     ],
   },
 };
+
+export default routes;
