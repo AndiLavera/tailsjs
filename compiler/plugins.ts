@@ -21,32 +21,44 @@ export function forEach(callback: (plugin: CompilerPlugin) => void) {
 export async function transform(modules: Record<string, string>) {
   const transformedModules: Record<string, string> = {};
 
-  for await (const moduleKey of Object.keys(modules)) {
-    const content = modules[moduleKey];
+  for await (const key of Object.keys(modules)) {
+    const module: { key: string; content: string } = {
+      key,
+      content: modules[key],
+    };
     let transformed = false;
 
     for await (const plugin of plugins) {
-      if (moduleKey.match(plugin.test) && plugin.transform) {
-        const transformedContent = await plugin.transform(
-          moduleKey,
-          content,
-        );
+      if (module.key.match(plugin.test) && plugin.transform) {
+        const transformedContent = await plugin.transform({
+          pathname: module.key,
+          content: module.content,
+        });
 
         let transformedPath;
-        if (plugin.transformPath) {
-          transformedPath = plugin.transformPath(moduleKey);
+        if (plugin.resolve) {
+          transformedPath = plugin.resolve(module.key);
         }
 
-        transformedModules[transformedPath || moduleKey] = await resolve(
+        if (transformedPath) {
+          module.key = transformedPath;
+        }
+        module.content = await resolve(
           transformedContent,
         );
+
         transformed = true;
       }
     }
 
     if (!transformed) {
-      transformedModules[moduleKey] = await resolve(content);
+      module.content = await resolve(module.content);
     }
+
+    // TODO: Add hmr plugin here when modules hold
+    // some value like `acceptHMR`
+
+    transformedModules[module.key] = module.content;
   }
 
   return transformedModules;
@@ -80,8 +92,8 @@ export function transformedPath(pathname: string) {
   let transformedPath = pathname;
 
   for (const plugin of plugins) {
-    if (pathname.match(plugin.test) && plugin.transformPath) {
-      transformedPath = plugin.transformPath(pathname);
+    if (pathname.match(plugin.test) && plugin.resolve) {
+      transformedPath = plugin.resolve(pathname);
     }
   }
 

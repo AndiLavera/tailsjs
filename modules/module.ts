@@ -179,10 +179,7 @@ export default class Module {
 
   async retranspile() {
     await this.loadFile();
-    console.log("retranspile");
-    console.log(this);
     await this.transpile();
-    console.log(this);
   }
 
   async write() {

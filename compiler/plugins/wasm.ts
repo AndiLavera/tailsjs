@@ -8,7 +8,7 @@ const defaultPlugin: CompilerPlugin = {
     exts: [".wasm"],
   },
   resolve: (url: string) => url.replace(/\.wasm/, ".wasm.js"),
-  async transform(pathname: string, content: string) {
+  async transform({ pathname }) {
     const data = await Deno.readFile(pathname);
 
     return `
@@ -19,7 +19,6 @@ const defaultPlugin: CompilerPlugin = {
     export default main;
   `;
   },
-  transformPath: (pathname: string) => pathname + ".js",
 };
 
 export default defaultPlugin;

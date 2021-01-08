@@ -9,12 +9,11 @@ const defaultPlugin: CompilerPlugin = {
     exts: [".module.css"],
   },
   resolve: (url: string) => url.replace(/\.css/, ".css.js"),
-  async transform(pathname: string, content: string) {
+  async transform({ content }) {
     const transformedContent = await cssTransform(content);
 
     return `export const styles = ${JSON.stringify(transformedContent)}`;
   },
-  transformPath: (pathname: string) => pathname.replace(".css", ".css.js"),
 };
 
 export default defaultPlugin;

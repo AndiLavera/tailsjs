@@ -102,9 +102,9 @@ export default class AssetRouter {
           const module = this.moduleHandler.get(key) as Module;
           let source = module.source as string;
 
-          if (this.config.mode === "development") {
-            source = injectHMR(key, source);
-          }
+          // if (this.config.mode === "development") {
+          //   source = injectHMR(key, source);
+          // }
 
           if (module.map) {
             const sourceMapUrl = (route: string) => route.slice(1);

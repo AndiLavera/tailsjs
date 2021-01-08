@@ -2,7 +2,7 @@ import { CompilerPlugin } from "../../types.ts";
 
 const defaultPlugin: CompilerPlugin = {
   name: "css-loader",
-  test: /.css/,
+  test: /(\w+\b(?<!\module)).css/,
   acceptHMR: true,
   walkOptions: {
     exts: [".css"],

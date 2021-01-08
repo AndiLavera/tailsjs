@@ -104,21 +104,17 @@ export interface CompilerPlugin {
    */
   walkOptions?: WalkOptions;
   /**
-   * `resolve` resolves the import url. This is invoked
+   * `resolve` transforms the filename & import url. This is invoked
    * before transpiling to ensure unsupported imports,
    * such as css imports, are not transpiled.
    */
   resolve?(url: string): string;
   /**
-   * Handles transforming the source content
-   * before transpiling.
+   * Handles transforming the source content before transpiling.
    */
-  transform?(pathname: string, content: string): Promise<string>;
-
-  /**
-   * Handles transforming the path before transpiling.
-   */
-  transformPath?(pathname: string): string;
+  transform?(
+    { pathname, content }: { pathname: string; content: string },
+  ): Promise<string>;
 }
 
 export interface TranspiledModules {
