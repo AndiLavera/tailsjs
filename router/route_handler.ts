@@ -2,7 +2,7 @@ import { Router as ServerRouter } from "../deps.ts";
 import { Configuration } from "../core/configuration.ts";
 import { path } from "../std.ts";
 import { APIModules, Routes, WebModules } from "../types.ts";
-import { ModuleHandler } from "../core/module_handler.ts";
+import { ModuleHandler } from "../modules/module_handler.ts";
 import APIRouter, { loadAPIModule } from "./api_router.ts";
 import AssetRouter from "./asset_router.ts";
 import { loadWebModule, WebRouter } from "./web_router.ts";

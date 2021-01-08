@@ -1,5 +1,5 @@
 import { Configuration } from "../core/configuration.ts";
-import { ModuleHandler } from "../core/module_handler.ts";
+import { ModuleHandler } from "../modules/module_handler.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Context } from "../deps.ts";
 import { path, walk } from "../std.ts";

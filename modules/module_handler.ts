@@ -1,9 +1,9 @@
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
-import { Configuration } from "./configuration.ts";
+import { Configuration } from "../core/configuration.ts";
 import log from "../logger/logger.ts";
-import { RouteHandler } from "../controller/route_handler.ts";
+import { RouteHandler } from "../router/route_handler.ts";
 import { EventEmitter } from "../hmr/events.ts";
 import Module from "../modules/module.ts";
 import * as compiler from "../compiler/compiler.ts";

@@ -39,7 +39,9 @@ export async function render(
 export async function renderSSGModule(
   pathname: string,
   staticRoutes: string[],
+  // deno-lint-ignore no-explicit-any
   App: ComponentType<any>,
+  // deno-lint-ignore no-explicit-any
   Document: ComponentType<any>,
 ): Promise<string | undefined> {
   if (!renderable(pathname)) return;

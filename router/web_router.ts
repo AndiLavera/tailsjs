@@ -1,10 +1,11 @@
 import { Configuration } from "../core/configuration.ts";
-import { ModuleHandler } from "../core/module_handler.ts";
+import { ModuleHandler } from "../modules/module_handler.ts";
 import { Context, Router as OakRouter } from "../deps.ts";
-import { WebModules, WebRoute, WebRoutes } from "../types.ts";
+import { WebModule, WebModules, WebRoute, WebRoutes } from "../types.ts";
 import { generateHTML } from "../utils/generateHTML.tsx";
 import { fetchHtml } from "../utils/fetchHTML.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
+import Module from "../modules/module.ts";
 
 export class WebRouter {
   readonly router: OakRouter;
@@ -41,31 +42,31 @@ export class WebRouter {
       const { method } = route;
 
       this.router.get(route.path, async (context: Context) => {
-        let webModule = webModules[route.path];
-        if (!webModule) {
-          webModule = await loadWebModule(route, moduleHandler, webModules);
-        }
-
-        // deno-lint-ignore no-explicit-any
-        let props: any;
-
-        if (webModule.controller && method) {
-          props = new webModule.controller()[method]();
-        }
-
-        const body = route.ssg
-          ? () => fetchHtml(route.page as string, this.moduleHandler.modules)
-          : () => generateHTML(App, Document, webModule.page, props);
-
-        let html;
         try {
-          html = body();
+          let webModule = webModules[route.path];
+          if (!webModule) {
+            webModule = await loadWebModule(route, moduleHandler, webModules);
+          }
+
+          // deno-lint-ignore no-explicit-any
+          let props: any;
+
+          if (webModule.controller.imp && method) {
+            props = new webModule.controller.imp()[method]();
+          }
+
+          webModule.page.module.render(App, Document, props);
+
+          const body = route.ssg
+            ? () => fetchHtml(route.page as string, this.moduleHandler.modules)
+            : () => generateHTML(App, Document, webModule.page.imp, props);
+
+          const html = body();
+          context.response.type = "text/html";
+          context.response.body = html;
         } catch (error) {
           console.log(error);
         }
-
-        context.response.type = "text/html";
-        context.response.body = html;
       });
     });
   }
@@ -75,7 +76,7 @@ export async function loadWebModule(
   route: WebRoute,
   moduleHandler: ModuleHandler,
   webModules: WebModules,
-) {
+): Promise<WebModule> {
   const { controller: controllerName, method } = route;
 
   let controllerModule;
@@ -93,14 +94,19 @@ export async function loadWebModule(
       controller = (await controllerModule?.import()).default;
     }
 
-    webModules[route.path] = {
-      page,
-      controller,
+    const webModule = {
+      page: {
+        imp: page,
+        module: pageModule as Module,
+      },
+      controller: {
+        imp: controller,
+        module: controllerModule,
+      },
     };
-    return {
-      page,
-      controller,
-    };
+
+    webModules[route.path] = webModule;
+    return webModule;
   } catch (error) {
     console.log(error);
     // TODO: Possible for this to be a controller, not a page. Leaving

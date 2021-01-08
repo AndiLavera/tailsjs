@@ -3,8 +3,8 @@ import log from "../logger/logger.ts";
 import { ensureDir, path } from "../std.ts";
 import { version } from "../version.ts";
 import { Configuration } from "./configuration.ts";
-import { RouteHandler } from "../controller/route_handler.ts";
-import { ModuleHandler } from "./module_handler.ts";
+import { RouteHandler } from "../router/route_handler.ts";
+import { ModuleHandler } from "../modules/module_handler.ts";
 
 export class Application {
   readonly config: Configuration;

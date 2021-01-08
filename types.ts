@@ -1,6 +1,7 @@
 import { WalkOptions } from "./std.ts";
-import Controller from "./controller/controller.ts";
+import Controller from "./router/controller.ts";
 import { ComponentType, Context } from "./deps.ts";
+import Module from "./modules/module.ts";
 
 // TODO: Document types
 
@@ -45,9 +46,15 @@ export interface APIRoutes {
 }
 
 export interface WebModule {
-  // deno-lint-ignore no-explicit-any
-  page: ComponentType<any>;
-  controller: new () => Controller;
+  page: {
+    // deno-lint-ignore no-explicit-any
+    imp: ComponentType<any>;
+    module: Module;
+  };
+  controller: {
+    imp: new () => Controller;
+    module: Module | undefined;
+  };
 }
 
 export type APIModules = Record<string, new () => Controller>;

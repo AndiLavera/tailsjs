@@ -5,6 +5,7 @@ import * as plugins from "../compiler/plugins.ts";
 import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
 import utils from "./utils.ts";
+import { generateHTML } from "../utils/generateHTML.tsx";
 
 interface Options {
   fullpath: string;
@@ -27,8 +28,14 @@ export default class Module {
   /** The path the module will get written to. */
   appRoot: string;
 
-  /** Is a static route */
+  /** `true` if this module is a static route */
   isStatic: boolean;
+
+  /**
+   * `true` if this module is a plugin module
+   * such as `.css` files.
+   */
+  isPlugin: boolean;
 
   /** The contents from reading the file */
   content?: string;
@@ -41,11 +48,11 @@ export default class Module {
 
   html?: string;
 
-  isPlugin: boolean;
+  writePath?: string;
 
   /** The function after importing */
-  private importedModule?: any; // () => any?
-  writePath?: string;
+  // deno-lint-ignore no-explicit-any
+  private importedModule?: any;
 
   constructor(
     { fullpath, html, source, map, content, isStatic, isPlugin, appRoot }:
@@ -89,12 +96,18 @@ export default class Module {
     return this.content;
   }
 
-  async render(
+  render(
     // deno-lint-ignore no-explicit-any
     App: ComponentType<any>,
     // deno-lint-ignore no-explicit-any
     Document: ComponentType<any>,
+    // deno-lint-ignore no-explicit-any
+    props: Record<string, any> = {},
   ) {
+    if (!this.isPage) return;
+
+    this.html = generateHTML(App, Document, this.module, props);
+    return this.html;
   }
 
   async transpile() {
