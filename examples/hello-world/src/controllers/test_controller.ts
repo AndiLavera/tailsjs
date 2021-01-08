@@ -1,4 +1,4 @@
-import { Controller } from "https://denopkg.com/andrewc910/tailsjs/mod.ts";
+import { Controller } from "https://deno.land/x/tails@v0.1.2/mod.ts";
 
 export default class extends Controller {
   show() {

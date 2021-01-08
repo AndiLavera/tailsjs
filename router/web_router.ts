@@ -55,11 +55,9 @@ export class WebRouter {
             props = new webModule.controller.imp()[method]();
           }
 
-          webModule.page.module.render(App, Document, props);
-
           const body = route.ssg
             ? () => fetchHtml(route.page as string, this.moduleHandler.modules)
-            : () => generateHTML(App, Document, webModule.page.imp, props);
+            : () => webModule.page.module.render(App, Document, props);
 
           const html = body();
           context.response.type = "text/html";

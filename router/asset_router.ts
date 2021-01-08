@@ -36,7 +36,12 @@ export default class AssetRouter {
   }
 
   private async setDefaultRoutes() {
-    const bootstrap = await this.fetchTailsAsset("/browser/bootstrap.js");
+    let bootstrap = await this.fetchTailsAsset("/browser/bootstrap.js");
+    if (this.config.mode === "production") {
+      bootstrap = bootstrap.replace('import "./_hmr.ts";\n', "")
+        .replace("?dev", "")
+        .replace("?dev", "");
+    }
 
     this.router.get("/bootstrap.ts", (context: Context) => {
       context.response.type = "application/javascript";

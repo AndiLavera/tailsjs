@@ -16,6 +16,7 @@ interface Options {
   content?: string;
   isStatic?: boolean;
   isPlugin?: boolean;
+  writePath?: string;
 }
 
 export default class Module {
@@ -55,8 +56,17 @@ export default class Module {
   private importedModule?: any;
 
   constructor(
-    { fullpath, html, source, map, content, isStatic, isPlugin, appRoot }:
-      Options,
+    {
+      fullpath,
+      html,
+      source,
+      map,
+      content,
+      isStatic,
+      isPlugin,
+      appRoot,
+      writePath,
+    }: Options,
   ) {
     this.fullPath = fullpath;
     this.html = html;
@@ -64,6 +74,7 @@ export default class Module {
     this.map = map;
     this.content = content;
     this.appRoot = appRoot;
+    this.writePath = writePath;
     this.isPlugin = isPlugin || false;
     this.isStatic = isStatic || false;
     this.srcPath = utils.cleanKey(fullpath, this.appRoot);
@@ -73,8 +84,8 @@ export default class Module {
     return this.srcPath.includes("/pages");
   }
 
-  get module() {
-    return this.importedModule || this.import();
+  async module() {
+    return this.importedModule || await this.import();
   }
 
   async import() {
@@ -106,8 +117,22 @@ export default class Module {
   ) {
     if (!this.isPage) return;
 
-    this.html = generateHTML(App, Document, this.module, props);
-    return this.html;
+    if (!this.importedModule) {
+      throw new Error("Must import module before rendering");
+    }
+
+    const html = generateHTML(
+      App,
+      Document,
+      this.importedModule.default,
+      props,
+    );
+
+    if (this.isStatic) {
+      this.html = html;
+    }
+
+    return html;
   }
 
   async transpile() {
@@ -152,7 +177,12 @@ export default class Module {
   async write() {
     if (this.writePath) {
       await ensureTextFile(this.writePath, this.source as string);
-      if (this.html) await ensureTextFile(`${this.writePath}.html`, this.html);
+      if (this.html) {
+        await ensureTextFile(
+          this.writePath.replace(".js", ".html"),
+          this.html,
+        );
+      }
     } else {
       throw new Error(`Module ${this.srcPath} has no writePath`);
     }

@@ -19,7 +19,7 @@ const routes = {
     routes: [
       {
         page: "index",
-        ssg: false,
+        ssg: true,
         path: "/",
         controller: "test_controller",
         method: "show",

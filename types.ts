@@ -126,12 +126,13 @@ export interface TranspiledModules {
   plugins: Record<string, string>;
 }
 
+export interface ManifestModule {
+  modulePath: string;
+  htmlPath?: string;
+}
+
 export interface Manifest {
-  [key: string]: {
-    path: string;
-    module: string;
-    html?: string;
-  };
+  [key: string]: ManifestModule;
 }
 
 /**

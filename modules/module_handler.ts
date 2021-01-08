@@ -1,6 +1,5 @@
 import { ComponentType } from "../deps.ts";
 import { ensureTextFile, existsFile } from "../fs.ts";
-import { path } from "../std.ts";
 import { Configuration } from "../core/configuration.ts";
 import log from "../logger/logger.ts";
 import { RouteHandler } from "../router/route_handler.ts";
@@ -10,7 +9,8 @@ import * as compiler from "../compiler/compiler.ts";
 import * as plugins from "../compiler/plugins.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
-import { Manifest } from "../types.ts";
+import { Manifest, ManifestModule, WebModules } from "../types.ts";
+import { loadWebModule } from "../router/web_router.ts";
 
 export class ModuleHandler {
   // deno-lint-ignore no-explicit-any
@@ -35,25 +35,34 @@ export class ModuleHandler {
   }
 
   async init(
+    staticRoutes: string[],
     options: Record<string, boolean> = { building: false },
   ): Promise<void> {
     // TODO: Make use of config.isBuilding
     if (this.config.mode === "production" && !options.building) {
       await this.loadManifest();
-      this.setManifestModules();
+      await this.setManifestModules();
       await this.setDefaultComponents();
       return;
     }
-  }
 
-  async build(staticRoutes: string[]) {
     await this.compile(staticRoutes);
     await this.writeAll();
     await this.setDefaultComponents();
+  }
 
-    if (this.config.mode === "production") {
-      // TODO: Move files to dist folder
+  async build(routeHandler: RouteHandler) {
+    await this.compile(routeHandler._staticRoutes);
+    await this.setDefaultComponents();
+
+    try {
+      await this.renderAll(routeHandler);
+    } catch (err) {
+      console.log(err);
+      throw new Error("Failed to render pages");
     }
+
+    await this.writeAll();
   }
 
   get(key: string): Module | undefined {
@@ -184,12 +193,32 @@ export class ModuleHandler {
   /**
    * Iterate over `this.manifest` and set `this.modules`.
    */
-  private setManifestModules(): void {
-    Object.keys(this.manifest)
-      .forEach((key) => {
-        const { module, html } = this.manifest[key];
-        // TODO: this.set(key, module, html);
+  private async setManifestModules() {
+    const decoder = new TextDecoder();
+
+    for await (const key of Object.keys(this.manifest)) {
+      const { modulePath, htmlPath } = this.manifest[key];
+
+      const moduleData = await Deno.readFile(modulePath);
+      let htmlData;
+      if (htmlPath) {
+        htmlData = await Deno.readFile(htmlPath);
+      }
+
+      const module = new Module({
+        fullpath: modulePath,
+        content: decoder.decode(moduleData),
+        html: htmlPath ? decoder.decode(htmlData) : undefined,
+        isStatic: !!htmlPath,
+        isPlugin: false,
+        appRoot: this.appRoot,
+        writePath: modulePath,
+        source: decoder.decode(moduleData),
       });
+
+      await module.import();
+      this.set(key, module);
+    }
   }
 
   /**
@@ -221,46 +250,41 @@ export class ModuleHandler {
 
   private async writeModule(key: string) {
     const module = (this.get(key) as Module);
-    const writePath = `${this.appRoot}/.tails/src${key}`;
+    await module.write();
 
-    this.manifest[key] = {
-      path: writePath,
-      module: module.source as string,
-      html: module.html,
+    const writePath = module.writePath as string;
+    const manifestModule: ManifestModule = {
+      modulePath: writePath,
     };
 
-    await module.write();
-  }
-
-  private async renderHTML(filePath: string, staticRoutes: string[]) {
-    if (
-      filePath.includes("_app") || filePath.includes("_document")
-    ) {
-      return;
+    if (module.isStatic) {
+      manifestModule.htmlPath = module.writePath?.replace(".js", ".html");
     }
 
-    const hasStaticRoute = staticRoutes.filter((route) =>
-      filePath.includes(route)
-    );
-    if (hasStaticRoute.length === 0) return;
+    this.manifest[key] = manifestModule;
+  }
 
-    const pagesDir = this.config.assetPath("pages");
-    const { default: App } = await import(
-      path.join(pagesDir, "_app.tsx")
-    );
+  private async renderAll(routeHandler: RouteHandler) {
+    for await (const route of routeHandler.routes.web.routes) {
+      const webModule = await loadWebModule(
+        route,
+        this,
+        routeHandler.webModules,
+      );
 
-    const { default: Document } = await import(
-      path.join(pagesDir, "_document.tsx")
-    );
+      let props;
+      if (webModule.controller.imp && route.method) {
+        props = new webModule.controller.imp()[route.method]();
+      }
 
-    // TODO:
-    // The `Math.random()` is to get around Deno's caching system
-    // See: https://github.com/denoland/deno/issues/6946
-    // return await render(
-    //   `${filePath}?version=${Math.random() + Math.random()}`,
-    //   App,
-    //   Document,
-    // );
+      webModule.page.module.render(
+        // deno-lint-ignore no-explicit-any
+        this.appComponent as ComponentType<any>,
+        // deno-lint-ignore no-explicit-any
+        this.documentComponent as ComponentType<any>,
+        props,
+      );
+    }
   }
 
   /**
@@ -280,7 +304,7 @@ export class ModuleHandler {
     }
 
     try {
-      const { default: component } = await module.module;
+      const { default: component } = await module.module();
       return component;
     } catch (err) {
       console.log(err);
