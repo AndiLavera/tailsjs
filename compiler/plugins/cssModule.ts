@@ -3,12 +3,12 @@ import { CompilerPlugin } from "../../types.ts";
 
 const defaultPlugin: CompilerPlugin = {
   name: "css-module-loader",
-  test: /.css/,
+  test: /.module.css/,
   acceptHMR: true,
   walkOptions: {
-    exts: [".css"],
+    exts: [".module.css"],
   },
-  resolve: (url: string) => url.replace(/\.css/, ".css.js"),
+  resolve: (url: string) => url.replace(/\.module.css/, ".css.js"),
   async transform(pathname: string, content: string) {
     const transformedContent = await cssTransform(content);
 
