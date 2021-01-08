@@ -100,13 +100,6 @@ export default class Module {
     return this.importedModule;
   }
 
-  async loadFile(): Promise<string> {
-    const decoder = new TextDecoder("utf-8");
-    const data = await Deno.readFile(this.fullPath);
-    this.content = decoder.decode(data);
-    return this.content;
-  }
-
   render(
     // deno-lint-ignore no-explicit-any
     App: ComponentType<any>,
@@ -135,7 +128,22 @@ export default class Module {
     return html;
   }
 
-  async transpile() {
+  fetchHTML(
+    // deno-lint-ignore no-explicit-any
+    App: ComponentType<any>,
+    // deno-lint-ignore no-explicit-any
+    Document: ComponentType<any>,
+    // deno-lint-ignore no-explicit-any
+    props: Record<string, any> = {},
+  ) {
+    return this.html || this.render(
+      App,
+      Document,
+      props,
+    );
+  }
+
+  async transpile(): Promise<string> {
     const content = this.content as string;
     const module: Record<string, string> = {};
     module[this.fullPath] = content;
@@ -186,5 +194,12 @@ export default class Module {
     } else {
       throw new Error(`Module ${this.srcPath} has no writePath`);
     }
+  }
+
+  private async loadFile(): Promise<string> {
+    const decoder = new TextDecoder("utf-8");
+    const data = await Deno.readFile(this.fullPath);
+    this.content = decoder.decode(data);
+    return this.content;
   }
 }

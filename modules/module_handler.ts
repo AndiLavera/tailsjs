@@ -265,6 +265,7 @@ export class ModuleHandler {
   }
 
   private async renderAll(routeHandler: RouteHandler) {
+    // TODO: loadApiModule?
     for await (const route of routeHandler.routes.web.routes) {
       const webModule = await loadWebModule(
         route,

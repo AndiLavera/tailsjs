@@ -10,6 +10,7 @@ import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
 import Module from "../modules/module.ts";
 import { version } from "../version.ts";
+import { setStaticMiddleware } from "./utils.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -25,6 +26,7 @@ export default class AssetRouter {
   }
 
   async setRoutes() {
+    // setStaticMiddleware(this.router);
     if (this.config.mode === "development") {
       this.handleHMR();
       await this.setHMRAssetRoutes();
@@ -80,11 +82,35 @@ export default class AssetRouter {
       const route = key.replace("/pages", "");
       log.debug(`  ${route}`);
 
+      const module = this.moduleHandler.get(key) as Module;
+      if (module.map) {
+        console.log(module.map);
+        log.debug(`  ${route}.map`);
+        this.router.get(`${route}.map`, (context: Context) => {
+          console.log("hit map");
+          try {
+            context.response.type = getContentType(route);
+            context.response.body = (this.moduleHandler.get(key) as Module).map;
+          } catch (error) {
+            log.error(error);
+          }
+        });
+      }
+
       this.router.get(route, (context: Context) => {
         try {
-          let source = (this.moduleHandler.get(key) as Module).source as string;
+          const module = this.moduleHandler.get(key) as Module;
+          let source = module.source as string;
+
           if (this.config.mode === "development") {
             source = injectHMR(key, source);
+          }
+
+          if (module.map) {
+            context.response.headers.set("SourceMap", route);
+            context.response.headers.set("X-SourceMap", route);
+            source = source +
+              `\n// # sourceMappingURL=${route}.map`;
           }
 
           context.response.type = getContentType(route);
