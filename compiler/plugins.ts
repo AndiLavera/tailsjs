@@ -2,9 +2,10 @@ import { CompilerPlugin } from "../types.ts";
 import nonjsImports from "./plugins/nonjsImports.ts";
 import cssModule from "./plugins/cssModule.ts";
 import wasm from "./plugins/wasm.ts";
+import css from "./plugins/css.ts";
 import { reImportPath } from "../core/utils.ts";
 
-const plugins = [nonjsImports, cssModule, wasm];
+const plugins = [nonjsImports, cssModule, wasm, css];
 
 export function forEach(callback: (plugin: CompilerPlugin) => void) {
   return plugins.forEach((plugin) => callback(plugin));
@@ -26,13 +27,19 @@ export async function transform(modules: Record<string, string>) {
 
     for await (const plugin of plugins) {
       if (moduleKey.match(plugin.test) && plugin.transform) {
-        const { transformedPath, transformedContent } = await plugin
-          .transform(
-            moduleKey,
-            content,
-          );
+        const transformedContent = await plugin.transform(
+          moduleKey,
+          content,
+        );
 
-        transformedModules[transformedPath] = await resolve(transformedContent);
+        let transformedPath;
+        if (plugin.transformPath) {
+          transformedPath = plugin.transformPath(moduleKey);
+        }
+
+        transformedModules[transformedPath || moduleKey] = await resolve(
+          transformedContent,
+        );
         transformed = true;
       }
     }
@@ -67,4 +74,16 @@ async function resolve(content: string) {
   }
 
   return transformedContent;
+}
+
+export function transformedPath(pathname: string) {
+  let transformedPath = pathname;
+
+  for (const plugin of plugins) {
+    if (pathname.match(plugin.test) && plugin.transformPath) {
+      transformedPath = plugin.transformPath(pathname);
+    }
+  }
+
+  return transformedPath;
 }

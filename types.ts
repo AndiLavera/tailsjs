@@ -110,13 +110,15 @@ export interface CompilerPlugin {
    */
   resolve?(url: string): string;
   /**
-   * Handles transforming the pathname or source
+   * Handles transforming the source content
    * before transpiling.
    */
-  transform?(pathname: string, content: string): Promise<{
-    transformedPath: string;
-    transformedContent: string;
-  }>;
+  transform?(pathname: string, content: string): Promise<string>;
+
+  /**
+   * Handles transforming the path before transpiling.
+   */
+  transformPath?(pathname: string): string;
 }
 
 export interface TranspiledModules {

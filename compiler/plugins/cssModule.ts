@@ -8,17 +8,13 @@ const defaultPlugin: CompilerPlugin = {
   walkOptions: {
     exts: [".module.css"],
   },
-  resolve: (url: string) => url.replace(/\.module.css/, ".css.js"),
+  resolve: (url: string) => url.replace(/\.css/, ".css.js"),
   async transform(pathname: string, content: string) {
     const transformedContent = await cssTransform(content);
 
-    return {
-      transformedPath: pathname + ".js",
-      transformedContent: `export const styles = ${
-        JSON.stringify(transformedContent)
-      }`,
-    };
+    return `export const styles = ${JSON.stringify(transformedContent)}`;
   },
+  transformPath: (pathname: string) => pathname.replace(".css", ".css.js"),
 };
 
 export default defaultPlugin;

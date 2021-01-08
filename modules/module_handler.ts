@@ -336,11 +336,11 @@ export class ModuleHandler {
         log.debug(`Processing ${fileName}`);
 
         // TODO: Possibly make this 2 event listeners
-        await this.recompile(path);
+        const transformedPath = await this.recompile(path);
         await routeHandler.reloadModule(path);
 
         // TODO: utils.cleanKey?
-        const cleanPath = path
+        const cleanPath = (transformedPath || path)
           .replace(`${this.config.assetDir}`, "")
           .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
 
@@ -364,7 +364,13 @@ export class ModuleHandler {
 
   private async recompile(filePath: string) {
     const key = utils.cleanKey(filePath, this.config.srcDir);
-    const module = this.modules.get(key);
+    let module = this.modules.get(key);
+    let transformedPath;
+
+    if (!module) {
+      transformedPath = plugins.transformedPath(key);
+      module = this.modules.get(transformedPath);
+    }
 
     if (!module) {
       throw new Error(
@@ -377,5 +383,6 @@ export class ModuleHandler {
 
     await module.retranspile();
     await module.write();
+    return transformedPath;
   }
 }

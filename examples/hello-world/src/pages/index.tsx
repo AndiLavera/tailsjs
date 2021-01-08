@@ -1,6 +1,6 @@
 import React, { useState } from "https://esm.sh/react@17.0.1";
 import Logo from "../components/logo.tsx";
-import { styles } from "../style/index.css";
+import { styles } from "../style/index.module.css";
 import main from "../wasm/42.wasm";
 
 function Home({ version }: { version: string }) {

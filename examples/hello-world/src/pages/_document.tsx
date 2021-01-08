@@ -17,6 +17,7 @@ export default function Document(
         <link rel="modulepreload" href="/main.js"></link>
         <link rel="modulepreload" href="/bootstrap.ts"></link>
         <link rel="modulepreload" href="/_app.js"></link>
+        <link rel="stylesheet" href="style/index.css"></link>
       </head>
       <body>
         <main id="app">

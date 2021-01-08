@@ -11,17 +11,15 @@ const defaultPlugin: CompilerPlugin = {
   async transform(pathname: string, content: string) {
     const data = await Deno.readFile(pathname);
 
-    return {
-      transformedPath: pathname + ".js",
-      transformedContent: `
-        const wasmCode = new Uint8Array([${data.join(",")}])
-        const wasmModule = new WebAssembly.Module(wasmCode);
-        const wasmInstance = new WebAssembly.Instance(wasmModule);
-        const main = wasmInstance.exports.main;
-        export default main;
-      `,
-    };
+    return `
+    const wasmCode = new Uint8Array([${data.join(",")}])
+    const wasmModule = new WebAssembly.Module(wasmCode);
+    const wasmInstance = new WebAssembly.Instance(wasmModule);
+    const main = wasmInstance.exports.main;
+    export default main;
+  `;
   },
+  transformPath: (pathname: string) => pathname + ".js",
 };
 
 export default defaultPlugin;
