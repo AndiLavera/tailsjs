@@ -11,6 +11,7 @@ import util from "../core/utils.ts";
 import Module from "../modules/module.ts";
 import { version } from "../version.ts";
 import { setStaticMiddleware } from "./utils.ts";
+import { APIRoute } from "../types.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -106,10 +107,12 @@ export default class AssetRouter {
           }
 
           if (module.map) {
-            context.response.headers.set("SourceMap", route);
-            context.response.headers.set("X-SourceMap", route);
+            const sourceMapUrl = (route: string) => route.slice(1);
+
+            context.response.headers.set("SourceMap", sourceMapUrl(route));
+            context.response.headers.set("X-SourceMap", sourceMapUrl(route));
             source = source +
-              `\n// # sourceMappingURL=${route}.map`;
+              `\n// # sourceMappingURL=${sourceMapUrl(route)}.map`;
           }
 
           context.response.type = getContentType(route);
