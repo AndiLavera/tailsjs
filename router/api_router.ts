@@ -30,32 +30,131 @@ export default class APIRouter {
     setMiddleware(apiRoutes.middleware, this.router);
 
     apiRoutes.routes.forEach((route) => {
-      const { method, httpMethod, path } = route;
-
-      // TODO: Other http methods
-      switch (httpMethod) {
+      // TODO: Set params and other important info
+      switch (route.httpMethod) {
+        case "DELETE":
+          this.handleDelete(route);
+          break;
         case "GET":
-          // TODO: Set params and other important info
-          this.router.get(path, async (context: Context) => {
-            try {
-              let module = apiModules[path];
-              if (!module) {
-                module = await loadAPIModule(route, moduleHandler, apiModules);
-              }
-
-              const controller = new module();
-
-              context.response.type = "application/json";
-              context.response.body = controller[method]();
-            } catch (err) {
-              console.log(err);
-            }
-          });
+          this.handleGet(route);
+          break;
+        case "HEAD":
+          this.handleHead(route);
+          break;
+        case "OPTIONS":
+          this.handleOptions(route);
+          break;
+        case "PATCH":
+          this.handlePatch(route);
           break;
         case "POST":
+          this.handlePost(route);
+          break;
+        case "PUT":
+          this.handlePut(route);
           break;
       }
     });
+  }
+
+  private handleDelete(route: APIRoute) {
+    const fetchModule = this.fetchModule.bind(this);
+    const { method, path } = route;
+
+    this.router.delete(path, async (context: Context) => {
+      const module = await fetchModule(route, path);
+      const controller = new module();
+
+      context.response.type = "application/json";
+      context.response.body = controller[method]();
+    });
+  }
+
+  private handleGet(route: APIRoute) {
+    const fetchModule = this.fetchModule.bind(this);
+    const { method, path } = route;
+
+    this.router.get(path, async (context: Context) => {
+      const module = await fetchModule(route, path);
+      const controller = new module();
+
+      context.response.type = "application/json";
+      context.response.body = controller[method]();
+    });
+  }
+
+  private handleHead(route: APIRoute) {
+    const fetchModule = this.fetchModule.bind(this);
+    const { method, path } = route;
+
+    this.router.head(path, async (context: Context) => {
+      const module = await fetchModule(route, path);
+      const controller = new module();
+
+      context.response.type = "application/json";
+      context.response.body = controller[method]();
+    });
+  }
+
+  private handleOptions(route: APIRoute) {
+    const fetchModule = this.fetchModule.bind(this);
+    const { method, path } = route;
+
+    this.router.options(path, async (context: Context) => {
+      const module = await fetchModule(route, path);
+      const controller = new module();
+
+      context.response.type = "application/json";
+      context.response.body = controller[method]();
+    });
+  }
+
+  private handlePatch(route: APIRoute) {
+    const fetchModule = this.fetchModule.bind(this);
+    const { method, path } = route;
+
+    this.router.patch(path, async (context: Context) => {
+      const module = await fetchModule(route, path);
+      const controller = new module();
+
+      context.response.type = "application/json";
+      context.response.body = controller[method]();
+    });
+  }
+
+  private handlePost(route: APIRoute) {
+    const fetchModule = this.fetchModule.bind(this);
+    const { method, path } = route;
+
+    this.router.post(path, async (context: Context) => {
+      const module = await fetchModule(route, path);
+      const controller = new module();
+
+      context.response.type = "application/json";
+      context.response.body = controller[method]();
+    });
+  }
+
+  private handlePut(route: APIRoute) {
+    const fetchModule = this.fetchModule.bind(this);
+    const { method, path } = route;
+
+    this.router.put(path, async (context: Context) => {
+      const module = await fetchModule(route, path);
+      const controller = new module();
+
+      context.response.type = "application/json";
+      context.response.body = controller[method]();
+    });
+  }
+
+  private async fetchModule(route: APIRoute, path: string) {
+    let module = this.apiModules[path];
+    if (!module) {
+      module = await loadAPIModule(route, this.moduleHandler, this.apiModules);
+    }
+
+    return module;
   }
 }
 

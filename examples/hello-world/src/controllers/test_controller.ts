@@ -2,12 +2,10 @@ import { Controller } from "https://deno.land/x/tails@v0.1.2/mod.ts";
 
 export default class extends Controller {
   show() {
-    console.log("show api hit");
-    return { method: "show" };
+    return { version: "0.1.2" };
   }
 
   create() {
-    console.log("create api hit");
-    return { version: "0.1.0" };
+    return { version: "0.1.2" };
   }
 }

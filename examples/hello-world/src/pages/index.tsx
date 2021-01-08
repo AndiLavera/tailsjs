@@ -3,9 +3,8 @@ import Logo from "../components/logo.tsx";
 import { styles } from "../style/index.css";
 import main from "../wasm/42.wasm";
 
-function Home() {
+function Home({ version }: { version: string }) {
   const [count, setCount] = useState(0);
-  const version = "0.1.0";
 
   return (
     <div className="page">

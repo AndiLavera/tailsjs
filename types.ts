@@ -6,15 +6,13 @@ import Module from "./modules/module.ts";
 // TODO: Document types
 
 type HTTPMethod =
-  | "CONNECT"
   | "DELETE"
   | "GET"
   | "HEAD"
   | "OPTIONS"
   | "PATCH"
   | "POST"
-  | "PUT"
-  | "TRACE";
+  | "PUT";
 
 export type Middleware = Array<
   (ctx: Context, next: () => Promise<void>) => Promise<void>

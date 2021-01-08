@@ -84,7 +84,6 @@ export default class AssetRouter {
 
       const module = this.moduleHandler.get(key) as Module;
       if (module.map) {
-        console.log(module.map);
         log.debug(`  ${route}.map`);
         this.router.get(`${route}.map`, (context: Context) => {
           console.log("hit map");
