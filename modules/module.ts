@@ -16,6 +16,8 @@ interface Options {
   isStatic?: boolean;
   isPlugin?: boolean;
   writePath?: string;
+  reactURL: string;
+  reactServerURL: string;
 }
 
 export default class Module {
@@ -30,6 +32,12 @@ export default class Module {
 
   /** `true` if this module is a static route */
   isStatic: boolean;
+
+  /** The local url to the react package. */
+  reactURL: string;
+
+  /** The local url to the react-dom server package. */
+  reactServerURL: string;
 
   /**
    * `true` if this module is a plugin module
@@ -65,6 +73,8 @@ export default class Module {
       isPlugin,
       appRoot,
       writePath,
+      reactURL,
+      reactServerURL,
     }: Options,
   ) {
     this.fullPath = fullpath;
@@ -74,6 +84,8 @@ export default class Module {
     this.content = content;
     this.appRoot = appRoot;
     this.writePath = writePath;
+    this.reactURL = reactURL;
+    this.reactServerURL = reactServerURL;
     this.isPlugin = isPlugin || false;
     this.isStatic = isStatic || false;
     this.srcPath = utils.cleanKey(fullpath, this.appRoot);
@@ -138,12 +150,14 @@ export default class Module {
       throw new Error("Must import module before rendering");
     }
 
-    const html = await generateHTML(
-      App,
-      Document,
-      this.importedModule.default,
+    const html = await generateHTML({
+      App: App,
+      Document: Document,
+      Component: this.importedModule.default,
       props,
-    );
+      reactURL: this.reactURL,
+      reactServerURL: this.reactServerURL,
+    });
 
     if (this.isStatic) {
       this.html = html;
@@ -178,8 +192,9 @@ export default class Module {
     } else {
       const transformedModule = await compiler.transform(module, {
         remoteWritePath: ".tails/_tails",
-        writeRemote: true,
         appRoot: this.appRoot,
+        reactLocalPath: this.reactURL,
+        reactDOMLocalPath: this.reactServerURL,
       });
       result = await compiler.transpile(transformedModule);
     }
@@ -217,7 +232,13 @@ export default class Module {
       if (this.html) {
         await ensureTextFile(
           this.htmlPath,
-          this.html as string,
+          this.html,
+        );
+      }
+      if (this.map) {
+        await ensureTextFile(
+          this.writePath + ".map",
+          this.map,
         );
       }
     } else {

@@ -1,18 +1,26 @@
 // import { renderToString } from "../deps.ts";
 
-export async function generateHTML(
-  App: any,
-  Document: any,
-  Component: any,
-  props: Record<string, any> = {},
-): Promise<string> {
-  const React = (await import(
-    "/home/andrew/workspace/js/tails/examples/hello-world/.tails/_tails/-/esm.sh/react@17.0.1.js"
-  )).default;
+import { ComponentType } from "../deps.ts";
 
-  const ReactDOMServer = await import(
-    "/home/andrew/workspace/js/tails/examples/hello-world/.tails/_tails/-/cdn.esm.sh/v14/react-dom@17.0.1/esnext/server.js"
-  );
+// {
+//   app: App,
+//   document: Document,
+//   component: this.importedModule.default,
+//   props,
+//   reactURL: this.reactURL,
+//   reactServerURL: this.reactServerURL,
+// }
+export async function generateHTML(renderData: {
+  App: ComponentType<any>;
+  Document: any;
+  Component: any;
+  props: Record<string, any>;
+  reactURL: string;
+  reactServerURL: string;
+}): Promise<string> {
+  const React = (await import(renderData.reactURL)).default;
+  const ReactDOMServer = await import(renderData.reactServerURL);
+  const { App, Document, Component, props } = renderData;
 
   return (ReactDOMServer as any).renderToString(
     <Document initialData={props}>

@@ -88,6 +88,8 @@ export interface CompilerOptions {
   writeRemote?: boolean;
   remoteWritePath?: string;
   appRoot?: string;
+  reactLocalPath?: string;
+  reactDOMLocalPath?: string;
 }
 
 /**

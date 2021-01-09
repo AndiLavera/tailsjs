@@ -10,8 +10,6 @@ import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
 import Module from "../modules/module.ts";
 import { version } from "../version.ts";
-import { setStaticMiddleware } from "./utils.ts";
-import { APIRoute } from "../types.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -35,18 +33,38 @@ export default class AssetRouter {
 
     await this.setDefaultRoutes();
     await this.setPublicRoutes();
-    this.setModuleRoutes();
+    await this.setAssetRoutes();
   }
 
   private async setDefaultRoutes() {
     let bootstrap = await this.fetchTailsAsset("/browser/bootstrap.js");
-    if (this.config.mode === "production") {
-      bootstrap = bootstrap.replace('import "./_hmr.ts";\n', "")
-        .replace("?dev", "")
-        .replace("?dev", "");
+    const reactPath = this.config.reactWritePath?.replace(
+      this.config.buildDir,
+      "",
+    );
+    const reactDOMPath = this.config.reactDOMWritePath?.replace(
+      this.config.buildDir,
+      "",
+    );
+    if (this.config.mode === "development") {
+      bootstrap = `
+      import "./_hmr.ts";
+      import React from "${reactPath}";
+      import { hydrate } from "${reactDOMPath}";
+      ` + bootstrap;
+
+      // TODO: To remove after updating versions
+      bootstrap = bootstrap.replace(
+        `import React from "https://esm.sh/react@17.0.1?dev";`,
+        "",
+      );
+      bootstrap = bootstrap.replace(
+        `import { hydrate } from "https://esm.sh/react-dom@17.0.1?dev";`,
+        "",
+      );
     }
 
-    this.router.get("/bootstrap.ts", (context: Context) => {
+    this.router.get("/bootstrap.js", (context: Context) => {
       context.response.type = "application/javascript";
       context.response.body = bootstrap;
     });
@@ -77,56 +95,34 @@ export default class AssetRouter {
     }
   }
 
-  // TODO: Clean up
-  private setModuleRoutes() {
-    log.debug("JS Asset Routes:");
-    for (const key of this.moduleHandler.keys()) {
-      if (key.includes("/server/")) continue;
+  private async setAssetRoutes() {
+    const assetDir = path.join(this.config.appRoot, ".tails/_tails");
 
-      const route = key
+    log.debug("JS Asset Routes:");
+    for await (const { path: assetFilePath } of walk(assetDir)) {
+      if (assetFilePath.includes("/server/")) continue;
+
+      if ((await Deno.lstat(assetFilePath)).isDirectory) continue;
+
+      const route = assetFilePath
+        .replace(assetDir, "")
         .replace("/app", "")
         .replace("/pages", "");
 
-      log.debug(`  ${route}`);
-      const module = this.moduleHandler.get(key) as Module;
+      log.debug(route);
 
-      if (module.map) {
-        log.debug(`  ${route}.map`);
-        // TODO: Map doesn't seem to work?
-        this.router.get(`${route}.map`, (context: Context) => {
-          console.log("hit map");
-          try {
-            context.response.type = getContentType(route);
-            context.response.body = (this.moduleHandler.get(key) as Module).map;
-          } catch (error) {
-            log.error(error);
-          }
-        });
-      }
+      this.router.get(route, async (context: Context) => {
+        context.response.type = getContentType(route);
 
-      this.router.get(route, (context: Context) => {
-        try {
-          const module = this.moduleHandler.get(key) as Module;
-          let source = module.source as string;
-
-          if (this.config.mode === "development") {
-            source = injectHMR(key, source);
-          }
-
-          if (module.map) {
-            const sourceMapUrl = (route: string) => route.slice(1);
-
-            context.response.headers.set("SourceMap", sourceMapUrl(route));
-            context.response.headers.set("X-SourceMap", sourceMapUrl(route));
-            source = source +
-              `\n// # sourceMappingURL=${sourceMapUrl(route)}.map`;
-          }
-
-          context.response.type = getContentType(route);
-          context.response.body = source;
-        } catch (error) {
-          log.error(error);
+        const file = await this.fetchStaticAsset(assetFilePath);
+        if (this.config.mode === "production") {
+          context.response.body = file;
+          return;
         }
+
+        context.response.body = assetFilePath.includes("/app/")
+          ? injectHMR(route, file)
+          : file;
       });
     }
   }

@@ -38,6 +38,24 @@ export class Configuration {
 
   isBuilding: boolean;
 
+  /**
+   * The path React was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactWritePath?: string;
+
+  /**
+   * The path ReactDOM was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactDOMWritePath?: string;
+
+  /**
+   * The path ReactDOMServer was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactServerWritePath?: string;
+
   /** The root dir of the users application */
   readonly appRoot: string;
 
@@ -107,7 +125,7 @@ export class Configuration {
   get mainJS(): string {
     // TODO: Just move bootstrap code here
     return `
-      import { bootstrap } from "./bootstrap.ts";
+      import { bootstrap } from "./bootstrap.js";
       bootstrap()
       `;
   }
@@ -115,7 +133,7 @@ export class Configuration {
   get buildDir() {
     return path.join(
       this.appRoot,
-      ".tails/src",
+      ".tails/_tails",
     );
   }
 

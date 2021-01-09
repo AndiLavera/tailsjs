@@ -12,6 +12,7 @@ import { Manifest, ManifestModule, WebModules } from "../types.ts";
 import { loadWebModule } from "../router/web_router.ts";
 import { path, walk } from "../std.ts";
 import { logBuildEvents } from "../utils/logBuildEvents.ts";
+import { fetchReactAssets } from "../utils/fetchReactAssets.ts";
 
 export class ModuleHandler {
   // deno-lint-ignore no-explicit-any
@@ -85,6 +86,16 @@ export class ModuleHandler {
   }
 
   private async compile(staticRoutes: string[]) {
+    const { reactDOMWritePath, reactWritePath, reactServerWritePath } =
+      await fetchReactAssets({
+        appRoot: this.appRoot,
+        remoteWritePath: ".tails/_tails",
+        mode: this.config.mode,
+      });
+    this.config.reactWritePath = reactWritePath;
+    this.config.reactDOMWritePath = reactDOMWritePath;
+    this.config.reactServerWritePath = reactServerWritePath;
+
     const decoder = new TextDecoder();
     const walkOptions = {
       includeDirs: true,
@@ -109,6 +120,8 @@ export class ModuleHandler {
         isStatic: renderer.isStatic(staticRoutes, cleanedKey),
         isPlugin: false,
         appRoot: this.appRoot,
+        reactURL: reactWritePath,
+        reactServerURL: reactServerWritePath,
       });
 
       const key = await module.transpile();
@@ -159,6 +172,8 @@ export class ModuleHandler {
         isStatic: renderer.isStatic(staticRoutes, cleanedKey),
         isPlugin: true,
         appRoot: this.appRoot,
+        reactURL: reactWritePath,
+        reactServerURL: reactServerWritePath,
       });
 
       const key = await module.transpile();
@@ -205,6 +220,7 @@ export class ModuleHandler {
         htmlData = await Deno.readFile(htmlPath);
       }
 
+      // TODO: Manifest should include react url
       const module = new Module({
         fullpath: modulePath,
         content: decoder.decode(moduleData),
@@ -214,6 +230,8 @@ export class ModuleHandler {
         appRoot: this.appRoot,
         writePath: modulePath,
         source: decoder.decode(moduleData),
+        reactURL: "TODO",
+        reactServerURL: "TODO",
       });
 
       // await module.import();
