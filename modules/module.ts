@@ -84,6 +84,15 @@ export default class Module {
     return this.srcPath.includes("/pages");
   }
 
+  get htmlPath() {
+    const dir = path.dirname(this.writePath as string);
+    const filename = (this.writePath as string).replace(dir, "");
+
+    return path
+      .join(dir, "../../static", filename)
+      .replace(".js", ".html");
+  }
+
   async module() {
     return this.importedModule || await this.import();
   }
@@ -157,8 +166,11 @@ export default class Module {
     }
 
     for (const key of Object.keys(result)) {
-      const cleanedKey = utils.cleanKey(key, this.appRoot);
-      this.writePath = path.join(this.appRoot, ".tails", cleanedKey);
+      const cleanedKey = utils.cleanKey(
+        key,
+        path.join(this.appRoot, "/src"),
+      );
+      this.writePath = path.join(this.appRoot, ".tails/_tails", cleanedKey);
       const module = result[key];
 
       if (typeof module === "string") {
@@ -173,7 +185,7 @@ export default class Module {
 
     return utils.removeDir(
       this.writePath as string,
-      path.join(this.appRoot, ".tails/src"),
+      path.join(this.appRoot, ".tails/_tails"),
     );
   }
 
@@ -187,8 +199,8 @@ export default class Module {
       await ensureTextFile(this.writePath, this.source as string);
       if (this.html) {
         await ensureTextFile(
-          this.writePath.replace(".js", ".html"),
-          this.html,
+          this.htmlPath,
+          this.html as string,
         );
       }
     } else {

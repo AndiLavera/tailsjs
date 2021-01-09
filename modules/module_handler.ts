@@ -11,6 +11,7 @@ import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
 import { Manifest, ManifestModule, WebModules } from "../types.ts";
 import { loadWebModule } from "../router/web_router.ts";
+import { path, walk } from "../std.ts";
 
 export class ModuleHandler {
   // deno-lint-ignore no-explicit-any
@@ -197,6 +198,7 @@ export class ModuleHandler {
     const decoder = new TextDecoder();
 
     for await (const key of Object.keys(this.manifest)) {
+      console.log(key);
       const { modulePath, htmlPath } = this.manifest[key];
 
       const moduleData = await Deno.readFile(modulePath);
@@ -216,7 +218,7 @@ export class ModuleHandler {
         source: decoder.decode(moduleData),
       });
 
-      await module.import();
+      // await module.import();
       this.set(key, module);
     }
   }
@@ -228,10 +230,26 @@ export class ModuleHandler {
     await this.writeModules();
     await this.writeManifest();
 
-    if (this.config.mode === "production") {
-      // TODO:
-      // await this.writeHTML();
-      // Copy files to /dist
+    if (this.config.isBuilding) {
+      await this.writePublic();
+    }
+  }
+
+  private async writePublic() {
+    const publicDir = path.join(this.appRoot, "public");
+    const decoder = new TextDecoder();
+
+    for await (const { path: staticFilePath } of walk(publicDir)) {
+      if (publicDir === staticFilePath) continue;
+
+      const dir = path.dirname(staticFilePath);
+      const filename = staticFilePath.replace(dir, "");
+      const data = await Deno.readFile(staticFilePath);
+
+      await ensureTextFile(
+        path.join(this.appRoot, ".tails/public", filename),
+        decoder.decode(data),
+      );
     }
   }
 
@@ -258,7 +276,7 @@ export class ModuleHandler {
     };
 
     if (module.isStatic) {
-      manifestModule.htmlPath = module.writePath?.replace(".js", ".html");
+      manifestModule.htmlPath = module.htmlPath;
     }
 
     this.manifest[key] = manifestModule;
