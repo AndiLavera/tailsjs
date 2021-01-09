@@ -1,4 +1,4 @@
-import { reDoubleQuotes, reHttp } from "../../core/utils.ts";
+import { doubleQuotesRegex, reHttp } from "../../core/utils.ts";
 import { CompilerPlugin } from "../../types.ts";
 
 /**
@@ -13,7 +13,7 @@ const defaultPlugin: CompilerPlugin = {
     let transformedUrl;
     // TODO: Match remaining string types
     // || path.match(reSingleQuotes) || path.match(reBackTicks)
-    const importURL = url.match(reDoubleQuotes);
+    const importURL = url.match(doubleQuotesRegex);
     if (!importURL || !importURL[0]) return url;
 
     if (!importURL[0].match(reHttp)) {

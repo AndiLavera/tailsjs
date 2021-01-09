@@ -15,11 +15,11 @@ export async function generateHTML(renderData: {
   Document: any;
   Component: any;
   props: Record<string, any>;
-  reactURL: string;
-  reactServerURL: string;
+  reactWritePath: string;
+  reactServerWritePath: string;
 }): Promise<string> {
-  const React = (await import(renderData.reactURL)).default;
-  const ReactDOMServer = await import(renderData.reactServerURL);
+  const React = (await import(renderData.reactWritePath)).default;
+  const ReactDOMServer = await import(renderData.reactServerWritePath);
   const { App, Document, Component, props } = renderData;
 
   return (ReactDOMServer as any).renderToString(

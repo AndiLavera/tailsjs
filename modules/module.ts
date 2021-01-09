@@ -5,19 +5,18 @@ import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
 import utils from "./utils.ts";
 import { generateHTML } from "../utils/generateHTML.tsx";
+import { Configuration } from "../core/configuration.ts";
 
 interface Options {
   fullpath: string;
-  appRoot: string;
+  isStatic: boolean;
+  isPlugin: boolean;
+  config: Configuration;
   html?: string;
   source?: string;
   map?: string;
   content?: string;
-  isStatic?: boolean;
-  isPlugin?: boolean;
   writePath?: string;
-  reactURL: string;
-  reactServerURL: string;
 }
 
 export default class Module {
@@ -27,17 +26,8 @@ export default class Module {
   /** The path of the module after `/src` */
   srcPath: string;
 
-  /** The path the module will get written to. */
-  appRoot: string;
-
   /** `true` if this module is a static route */
   isStatic: boolean;
-
-  /** The local url to the react package. */
-  reactURL: string;
-
-  /** The local url to the react-dom server package. */
-  reactServerURL: string;
 
   /**
    * `true` if this module is a plugin module
@@ -62,6 +52,8 @@ export default class Module {
   // deno-lint-ignore no-explicit-any
   private importedModule?: any;
 
+  private readonly config: Configuration;
+
   constructor(
     {
       fullpath,
@@ -71,10 +63,8 @@ export default class Module {
       content,
       isStatic,
       isPlugin,
-      appRoot,
       writePath,
-      reactURL,
-      reactServerURL,
+      config,
     }: Options,
   ) {
     this.fullPath = fullpath;
@@ -82,13 +72,11 @@ export default class Module {
     this.source = source;
     this.map = map;
     this.content = content;
-    this.appRoot = appRoot;
     this.writePath = writePath;
-    this.reactURL = reactURL;
-    this.reactServerURL = reactServerURL;
+    this.config = config;
     this.isPlugin = isPlugin || false;
     this.isStatic = isStatic || false;
-    this.srcPath = utils.cleanKey(fullpath, this.appRoot);
+    this.srcPath = utils.cleanKey(fullpath, config.appRoot);
   }
 
   get isPage() {
@@ -100,7 +88,7 @@ export default class Module {
   }
 
   get appPath() {
-    return path.join(this.appRoot, "/app");
+    return path.join(this.config.appRoot, "/app");
   }
 
   get isServerMod() {
@@ -108,7 +96,7 @@ export default class Module {
   }
 
   get serverPath() {
-    return path.join(this.appRoot, "/server");
+    return path.join(this.config.appRoot, "/server");
   }
 
   get htmlPath() {
@@ -155,8 +143,8 @@ export default class Module {
       Document: Document,
       Component: this.importedModule.default,
       props,
-      reactURL: this.reactURL,
-      reactServerURL: this.reactServerURL,
+      reactWritePath: this.config.reactWritePath as string,
+      reactServerWritePath: this.config.reactServerWritePath as string,
     });
 
     if (this.isStatic) {
@@ -192,17 +180,21 @@ export default class Module {
     } else {
       const transformedModule = await compiler.transform(module, {
         remoteWritePath: ".tails/_tails",
-        appRoot: this.appRoot,
-        reactLocalPath: this.reactURL,
-        reactDOMLocalPath: this.reactServerURL,
+        appRoot: this.config.appRoot,
+        reactLocalPath: this.config.reactWritePath,
+        reactDOMLocalPath: this.config.reactServerWritePath,
       });
       result = await compiler.transpile(transformedModule);
     }
 
     for (const key of Object.keys(result)) {
-      const cleanedKey = utils.cleanKey(key, this.appRoot);
+      const cleanedKey = utils.cleanKey(key, this.config.appRoot);
 
-      this.writePath = path.join(this.appRoot, ".tails/_tails", cleanedKey);
+      this.writePath = path.join(
+        this.config.appRoot,
+        ".tails/_tails",
+        cleanedKey,
+      );
       const module = result[key];
 
       if (typeof module === "string") {
@@ -217,7 +209,7 @@ export default class Module {
 
     return utils.removeDir(
       this.writePath as string,
-      path.join(this.appRoot, ".tails/_tails"),
+      path.join(this.config.appRoot, ".tails/_tails"),
     );
   }
 

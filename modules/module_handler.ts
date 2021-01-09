@@ -86,12 +86,11 @@ export class ModuleHandler {
   }
 
   private async compile(staticRoutes: string[]) {
-    const { reactDOMWritePath, reactWritePath, reactServerWritePath } =
-      await fetchReactAssets({
-        appRoot: this.appRoot,
-        remoteWritePath: ".tails/_tails",
-        mode: this.config.mode,
-      });
+    const {
+      reactDOMWritePath,
+      reactWritePath,
+      reactServerWritePath,
+    } = await fetchReactAssets(this.config);
     this.config.reactWritePath = reactWritePath;
     this.config.reactDOMWritePath = reactDOMWritePath;
     this.config.reactServerWritePath = reactServerWritePath;
@@ -119,9 +118,7 @@ export class ModuleHandler {
         content: decoder.decode(data),
         isStatic: renderer.isStatic(staticRoutes, cleanedKey),
         isPlugin: false,
-        appRoot: this.appRoot,
-        reactURL: reactWritePath,
-        reactServerURL: reactServerWritePath,
+        config: this.config,
       });
 
       const key = await module.transpile();
@@ -171,9 +168,7 @@ export class ModuleHandler {
         content: decoder.decode(data),
         isStatic: renderer.isStatic(staticRoutes, cleanedKey),
         isPlugin: true,
-        appRoot: this.appRoot,
-        reactURL: reactWritePath,
-        reactServerURL: reactServerWritePath,
+        config: this.config,
       });
 
       const key = await module.transpile();
@@ -227,11 +222,9 @@ export class ModuleHandler {
         html: htmlPath ? decoder.decode(htmlData) : undefined,
         isStatic: !!htmlPath,
         isPlugin: false,
-        appRoot: this.appRoot,
         writePath: modulePath,
         source: decoder.decode(moduleData),
-        reactURL: "TODO",
-        reactServerURL: "TODO",
+        config: this.config,
       });
 
       // await module.import();

@@ -1,9 +1,10 @@
 import {
-  reDoubleQuotes,
+  doubleQuotesRegex,
   reExportPath,
   reHttp,
   reImportPath,
   reModuleExt,
+  urlRegex,
 } from "../core/utils.ts";
 import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
@@ -26,18 +27,16 @@ export async function recurseImports(
     // TODO: Match remaining string types
     // || path.match(reSingleQuotes) || path.match(reBackTicks)
     // Note: Matches contain quotes: "\"https://...\""
-    const importURL = imp.match(reDoubleQuotes);
-    if (!importURL || !importURL[0] || !importURL[0].match(reHttp)) continue;
+    const matchedURL = imp.match(doubleQuotesRegex);
+    if (!matchedURL || !matchedURL[0] || !matchedURL[0].match(reHttp)) continue;
+
+    const url = matchedURL[0];
 
     let to;
-    if (
-      /^(https?:\/\/[0-9a-z\.\-]+)?\/react(@[0-9a-z\.\-]+)?\/?$/i.test(
-        importURL[0].slice(1, -1),
-      ) && opts.reactLocalPath
-    ) {
+    if (urlRegex.test(url) && opts.reactLocalPath) {
       to = opts.reactLocalPath;
     } else {
-      to = await fetchRemote(importURL[0], opts);
+      to = await fetchRemote(url, opts);
     }
 
     const pathToAdd = !pathname.includes(".tails/_tails")
@@ -50,8 +49,8 @@ export async function recurseImports(
     );
 
     transformedImp = imp.replace(
-      importURL[0],
-      `"${getRelativePath(path.dirname(from), to)}"`,
+      url,
+      getRelativePath(path.dirname(from), to),
     );
 
     transformedContent = transformedContent.replace(
@@ -65,7 +64,7 @@ export async function recurseImports(
 
 export async function fetchRemote(url: string, opts: CompilerOptions) {
   const { remoteWritePath, appRoot } = opts;
-  const cleanURL = url.slice(1, -1); // Strip quotes from string
+  const cleanURL = url;
 
   let writePath = path.join(
     appRoot as string,

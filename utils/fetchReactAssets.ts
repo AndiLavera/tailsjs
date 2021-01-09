@@ -1,10 +1,10 @@
-import { reDoubleQuotes, reHttp } from "../core/utils.ts";
+import { Configuration } from "../core/configuration.ts";
+import { __reactRegex, doubleQuotesRegex, reHttp } from "../core/utils.ts";
 import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { getRelativePath } from "./getRelativePath.ts";
 import { recurseImports } from "./recurseImports.ts";
 
-// TODO: Just pass config in and use that..
 /**
  * Handles fetching react & writing it, fetching reactDOMServer,
  * mutating the import to that of the local react and then writing it,
@@ -12,22 +12,19 @@ import { recurseImports } from "./recurseImports.ts";
  *
  * @param opts
  */
-export async function fetchReactAssets(opts: {
-  remoteWritePath: string;
-  appRoot: string;
-  mode: string;
-}) {
-  const { remoteWritePath, appRoot, mode } = opts;
+export async function fetchReactAssets(config: Configuration) {
+  const { appRoot, mode, buildDir } = config;
   const reactURL = "https://esm.sh/react@17.0.1";
   const reactLocalURL = reactURL.replace(reHttp, "-/");
   const reactDOMURL = "https://esm.sh/react-dom@17.0.1";
   const reactDOMLocalURL = reactDOMURL.replace(reHttp, "-/");
   const reactServerURL = "https://esm.sh/react-dom@17.0.1/server";
   const reactServerLocalURL = reactServerURL.replace(reHttp, "-/");
-  const buildDir = path.join(
-    appRoot as string,
-    remoteWritePath as string,
-  );
+  const opts = {
+    appRoot,
+    reactLocalPath: config.reactDomUrl,
+    remoteWritePath: config.buildDir.replace(appRoot, ""),
+  };
 
   const reactAsset = await fetch(
     mode === "development" ? (reactURL + "?dev") : reactURL,
@@ -58,14 +55,14 @@ export async function fetchReactAssets(opts: {
       transformedContent,
     );
 
-    const importURL = transformedContent.match(reDoubleQuotes);
+    const importURL = transformedContent.match(doubleQuotesRegex);
     if (!importURL || !importURL[0]) {
       throw new Error("Some error occured when compiling react-dom");
     }
 
     const reactDOMPath = path.join(
       path.dirname(reactDOMWritePath),
-      importURL[0].slice(1, -1),
+      importURL[0],
     );
 
     const decoder = new TextDecoder();
@@ -81,11 +78,7 @@ export async function fetchReactAssets(opts: {
 
     // TODO: Better regex
     reactDOMFile = reactDOMFile.replace(
-      /import __react from "\/(\w+)\/(\w+)@(\w+).(\w+).(\w+)\/(\w+)\/(\w+).js"/,
-      `import __react from "${relativePath}"`,
-    );
-    reactDOMFile = reactDOMFile.replace(
-      /import __react from "\/(\w+)\/(\w+)@(\w+).(\w+).(\w+)\/(\w+)\/(\w+).development.js"/,
+      __reactRegex,
       `import __react from "${relativePath}"`,
     );
 
@@ -96,8 +89,7 @@ export async function fetchReactAssets(opts: {
     mode === "development" ? (reactServerURL + "?dev") : reactServerURL,
   );
   const reactServerWritePath = path.join(
-    appRoot as string,
-    remoteWritePath as string,
+    buildDir,
     reactServerLocalURL + ".js",
   );
 
@@ -112,14 +104,14 @@ export async function fetchReactAssets(opts: {
       transformedContent,
     );
 
-    const importURL = transformedContent.match(reDoubleQuotes);
+    const importURL = transformedContent.match(doubleQuotesRegex);
     if (!importURL || !importURL[0]) {
       throw new Error("Some error occured when compiling react-dom");
     }
 
     const reactServerPath = path.join(
       path.dirname(reactServerWritePath),
-      importURL[0].slice(1, -1),
+      importURL[0],
     );
 
     const decoder = new TextDecoder();
@@ -133,13 +125,8 @@ export async function fetchReactAssets(opts: {
       reactWritePath,
     );
 
-    // TODO: Better regex
     reactServer = reactServer.replace(
-      /import __react from "\/(\w+)\/(\w+)@(\w+).(\w+).(\w+)\/(\w+)\/(\w+).js"/,
-      `import __react from "${relativePath}"`,
-    );
-    reactServer = reactServer.replace(
-      /import __react from "\/(\w+)\/(\w+)@(\w+).(\w+).(\w+)\/(\w+)\/(\w+).development.js"/,
+      __reactRegex,
       `import __react from "${relativePath}"`,
     );
 

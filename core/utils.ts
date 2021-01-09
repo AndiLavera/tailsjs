@@ -12,15 +12,18 @@ export const reStyleModuleExt = /\.(css|less)$/i;
 export const reMDExt = /\.(md|markdown)$/i;
 export const reLocaleID = /^[a-z]{2}(-[a-zA-Z0-9]+)?$/;
 export const reHashJs = new RegExp(`\\.[0-9a-fx]{${hashShort}}\\.js$`, "i");
-export const reImportPath =
-  /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
-export const reExportPath =
-  /export\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
-export const reDoubleQuotes = /"([^\\"]|\\\\|\\")*"/;
+export const doubleQuotesRegex = /(?<=\")(.*?)(?=\")/;
 export const reExportDefaultFunction = /export default function (\w+)/;
 export const reExportDefault = /export default (\w+)/;
 export const reExportConst = /export const (\w+)/;
 export const reEsmUrl = /https?:\/\/esm.sh\//;
+export const __reactRegex = /import __react from "(?<=\")(.*?)(?=\")"/;
+export const reImportPath =
+  /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
+export const reExportPath =
+  /export\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
+export const urlRegex =
+  /^(https?:\/\/[0-9a-z\.\-]+)?\/react(@[0-9a-z\.\-]+)?\/?$/i;
 
 export const KB = 1024;
 export const MB = KB ** 2;
