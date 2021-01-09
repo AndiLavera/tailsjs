@@ -121,7 +121,7 @@ export default class AssetRouter {
         }
 
         context.response.body = assetFilePath.includes("/app/")
-          ? injectHMR(route, file)
+          ? injectHMR(assetFilePath.replace(assetDir, ""), file)
           : file;
       });
     }
@@ -148,7 +148,7 @@ export default class AssetRouter {
                   JSON.stringify({
                     type: "update",
                     moduleId: data.id,
-                    updateUrl: data.id.replace("/pages", ""),
+                    updateUrl: data.id.replace("/app/pages", ""),
                   }),
                 );
               };

@@ -1,6 +1,4 @@
-import { ComponentType } from "../deps.ts";
-import { generateHTML } from "../utils/generateHTML.tsx";
-
+// TODO: do something with this module
 export function renderable(path: string) {
   return !path.includes("_app") &&
     !path.includes("_document") &&

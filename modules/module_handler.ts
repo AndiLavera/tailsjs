@@ -380,7 +380,7 @@ export class ModuleHandler {
 
         // TODO: utils.cleanKey?
         const cleanPath = (transformedPath || path)
-          .replace(`${this.config.assetDir}`, "")
+          .replace(`${this.config.appRoot}`, "")
           .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
 
         this.eventListeners.forEach((eventListener) => {
@@ -402,8 +402,7 @@ export class ModuleHandler {
   }
 
   private async recompile(filePath: string) {
-    let key = utils.cleanKey(filePath, this.config.appDir);
-    key = utils.cleanKey(filePath, this.config.serverDir);
+    const key = utils.cleanKey(filePath, this.config.appRoot);
 
     let module = this.modules.get(key);
     let transformedPath;
