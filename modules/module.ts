@@ -1,7 +1,6 @@
 import { ComponentType } from "../deps.ts";
 import { dynamicImport } from "../utils/dynamicImport.ts";
 import * as compiler from "../compiler/compiler.ts";
-import * as plugins from "../compiler/plugins.ts";
 import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
 import utils from "./utils.ts";
@@ -159,9 +158,9 @@ export default class Module {
     let result;
 
     if (this.isPlugin) {
-      result = await plugins.transform(module);
+      result = await compiler.transform(module);
     } else {
-      const transformedModule = await plugins.transform(module);
+      const transformedModule = await compiler.transform(module);
       result = await compiler.transpile(transformedModule);
     }
 

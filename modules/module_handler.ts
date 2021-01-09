@@ -6,12 +6,12 @@ import { RouteHandler } from "../router/route_handler.ts";
 import { EventEmitter } from "../hmr/events.ts";
 import Module from "../modules/module.ts";
 import * as compiler from "../compiler/compiler.ts";
-import * as plugins from "../compiler/plugins.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
 import { Manifest, ManifestModule, WebModules } from "../types.ts";
 import { loadWebModule } from "../router/web_router.ts";
 import { path, walk } from "../std.ts";
+import { logBuildEvents } from "../utils/logBuildEvents.ts";
 
 export class ModuleHandler {
   // deno-lint-ignore no-explicit-any
@@ -64,6 +64,7 @@ export class ModuleHandler {
     }
 
     await this.writeAll();
+    await logBuildEvents(path.join(this.appRoot, ".tails"));
   }
 
   get(key: string): Module | undefined {
@@ -132,7 +133,7 @@ export class ModuleHandler {
     let skip: RegExp[] = [];
     const includeDirs = true;
 
-    plugins.forEach(({ walkOptions }) => {
+    compiler.forEach(({ walkOptions }) => {
       if (walkOptions) {
         if (walkOptions.exts) {
           exts = exts.concat(walkOptions.exts);
@@ -198,7 +199,6 @@ export class ModuleHandler {
     const decoder = new TextDecoder();
 
     for await (const key of Object.keys(this.manifest)) {
-      console.log(key);
       const { modulePath, htmlPath } = this.manifest[key];
 
       const moduleData = await Deno.readFile(modulePath);
@@ -386,7 +386,7 @@ export class ModuleHandler {
     let transformedPath;
 
     if (!module) {
-      transformedPath = plugins.transformedPath(key);
+      transformedPath = compiler.transformedPath(key);
       module = this.modules.get(transformedPath);
     }
 
