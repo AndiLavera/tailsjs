@@ -80,6 +80,10 @@ export default class AssetRouter {
   private setModuleRoutes() {
     log.debug("JS Asset Routes:");
     for (const key of this.moduleHandler.keys()) {
+      if (key.includes("/controllers/") || key.includes("/middleware/")) {
+        continue;
+      }
+
       const route = key.replace("/pages", "");
       log.debug(`  ${route}`);
 
@@ -102,9 +106,9 @@ export default class AssetRouter {
           const module = this.moduleHandler.get(key) as Module;
           let source = module.source as string;
 
-          // if (this.config.mode === "development") {
-          //   source = injectHMR(key, source);
-          // }
+          if (this.config.mode === "development") {
+            source = injectHMR(key, source);
+          }
 
           if (module.map) {
             const sourceMapUrl = (route: string) => route.slice(1);

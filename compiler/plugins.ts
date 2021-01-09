@@ -55,9 +55,6 @@ export async function transform(modules: Record<string, string>) {
       module.content = await resolve(module.content);
     }
 
-    // TODO: Add hmr plugin here when modules hold
-    // some value like `acceptHMR`
-
     transformedModules[module.key] = module.content;
   }
 
