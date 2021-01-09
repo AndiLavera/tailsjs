@@ -38,8 +38,15 @@ export class Configuration {
 
   isBuilding: boolean;
 
+  /** The root dir of the users application */
   readonly appRoot: string;
-  readonly srcDir: string;
+
+  /** The app folder of the users application */
+  readonly appDir: string;
+
+  /** The server folder of the users application */
+  readonly serverDir: string;
+
   readonly mode: "test" | "development" | "production";
 
   /** `reactUrl` specifies the **react** download URL (default is 'https://esm.sh/react@16.14.0'). */
@@ -56,7 +63,8 @@ export class Configuration {
     building: boolean = false,
   ) {
     this.appRoot = path.resolve(appDir);
-    this.srcDir = path.join(this.appRoot, "src");
+    this.appDir = path.join(this.appRoot, "app");
+    this.serverDir = path.join(this.appRoot, "server");
     this.mode = mode;
     this.outputDir = "/dist";
     this.baseUrl = "/";

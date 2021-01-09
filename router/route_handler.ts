@@ -94,7 +94,8 @@ export class RouteHandler {
 
   async reloadModule(pathname: string) {
     const srcPath = pathname
-      .replace(this.config.srcDir, "")
+      .replace(this.config.appDir, "")
+      .replace(this.config.serverDir, "")
       .replace(reModuleExt, ".js");
 
     if (srcPath.includes("/controllers")) {

@@ -106,7 +106,8 @@ export class ModuleHandler {
      */
     const loadModule = async (pathname: string) => {
       const data = await Deno.readFile(pathname);
-      const cleanedKey = utils.cleanKey(pathname, this.config.srcDir);
+      let cleanedKey = utils.cleanKey(pathname, this.config.appDir);
+      cleanedKey = utils.cleanKey(pathname, this.config.serverDir);
 
       const module = new Module({
         fullpath: pathname,
@@ -121,7 +122,13 @@ export class ModuleHandler {
     };
 
     await compiler.walkDir(
-      this.config.srcDir,
+      this.config.appDir,
+      loadModule,
+      walkOptions,
+    );
+
+    await compiler.walkDir(
+      this.config.serverDir,
       loadModule,
       walkOptions,
     );
@@ -150,7 +157,7 @@ export class ModuleHandler {
      */
     const loadPlugin = async (pathname: string) => {
       const data = await Deno.readFile(pathname);
-      const cleanedKey = utils.cleanKey(pathname, this.config.srcDir);
+      const cleanedKey = utils.cleanKey(pathname, this.config.appDir);
 
       const module = new Module({
         fullpath: pathname,
@@ -171,7 +178,7 @@ export class ModuleHandler {
     };
 
     await compiler.walkDir(
-      this.config.srcDir,
+      this.config.appDir,
       loadPlugin,
       pluginWalkOptions,
     );
@@ -310,8 +317,10 @@ export class ModuleHandler {
    * `writeAll` as loadXComponent expects the manifest to be built.
    */
   private async setDefaultComponents(): Promise<void> {
-    this.appComponent = await this.loadComponent("/pages/_app.js");
-    this.documentComponent = await this.loadComponent("/pages/_document.js");
+    this.appComponent = await this.loadComponent("/app/pages/_app.js");
+    this.documentComponent = await this.loadComponent(
+      "/app/pages/_document.js",
+    );
   }
 
   // deno-lint-ignore no-explicit-any
@@ -333,7 +342,8 @@ export class ModuleHandler {
   async watch(routeHandler: RouteHandler) {
     log.info("Start watching code changes...");
 
-    const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
+    // TODO: Watch controllers
+    const watch = Deno.watchFs(this.config.appDir, { recursive: true });
     let reloading = false;
 
     for await (const event of watch) {
@@ -380,7 +390,9 @@ export class ModuleHandler {
   }
 
   private async recompile(filePath: string) {
-    const key = utils.cleanKey(filePath, this.config.srcDir);
+    let key = utils.cleanKey(filePath, this.config.appDir);
+    key = utils.cleanKey(filePath, this.config.serverDir);
+
     let module = this.modules.get(key);
     let transformedPath;
 

@@ -77,19 +77,22 @@ export default class AssetRouter {
     }
   }
 
+  // TODO: Clean up
   private setModuleRoutes() {
     log.debug("JS Asset Routes:");
     for (const key of this.moduleHandler.keys()) {
-      if (key.includes("/controllers/") || key.includes("/middleware/")) {
-        continue;
-      }
+      if (key.includes("/server/")) continue;
 
-      const route = key.replace("/pages", "");
+      const route = key
+        .replace("/app", "")
+        .replace("/pages", "");
+
       log.debug(`  ${route}`);
-
       const module = this.moduleHandler.get(key) as Module;
+
       if (module.map) {
         log.debug(`  ${route}.map`);
+        // TODO: Map doesn't seem to work?
         this.router.get(`${route}.map`, (context: Context) => {
           console.log("hit map");
           try {

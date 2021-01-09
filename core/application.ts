@@ -114,7 +114,7 @@ export class Application {
   }
 
   private async init(reload: boolean): Promise<void> {
-    const pagesDir = path.join(this.appRoot, "src/pages");
+    const pagesDir = path.join(this.appRoot, "app/pages");
 
     if (!(existsDirSync(pagesDir))) {
       log.fatal(`'pages' directory not found.`);

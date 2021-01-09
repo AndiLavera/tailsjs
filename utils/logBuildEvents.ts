@@ -5,7 +5,7 @@ import { colors, path, walk } from "../std.ts";
 export async function logBuildEvents(buildPath: string) {
   const staticPath = path.join(buildPath, "static");
   const publicPath = path.join(buildPath, "public");
-  const pagesPath = path.join(buildPath, "_tails/pages");
+  const pagesPath = path.join(buildPath, "_tails/app/pages");
   const pages: string[] = [];
 
   for await (const { path: pathname } of walk(pagesPath)) {

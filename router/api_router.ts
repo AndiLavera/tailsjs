@@ -165,7 +165,7 @@ export async function loadAPIModule(
 ) {
   try {
     const module = moduleHandler.modules.get(
-      `/controllers/${route.controller}.js`,
+      `/server/controllers/${route.controller}.js`,
     );
     const controller = (await module?.import()).default;
     apiModules[route.path] = controller;

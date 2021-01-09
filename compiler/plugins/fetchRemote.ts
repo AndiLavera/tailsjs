@@ -60,8 +60,8 @@ async function recurseImports(
 async function fetchRemote(url: string, opts: CompilerOptions) {
   console.log(url);
   const { remoteWritePath } = opts;
-  // Strip quotes from string
-  const cleanURL = url.slice(1, -1);
+  const cleanURL = url.slice(1, -1); // Strip quotes from string
+
   const writePath = path.join(
     remoteWritePath as string,
     cleanURL.replace(reHttp, "-/") + ".js",
@@ -70,15 +70,10 @@ async function fetchRemote(url: string, opts: CompilerOptions) {
   const asset = await fetch(cleanURL);
   if (asset.status === 200) {
     const content = await asset.text();
-    // console.log(
-    //   await recurseImports({ pathname: writePath, content }, opts),
-    // );
-
     await ensureTextFile(
       writePath,
       await recurseImports({ pathname: writePath, content }, opts),
     );
-    // console.log(await asset.text());
   }
 
   return url;

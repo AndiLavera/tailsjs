@@ -83,12 +83,28 @@ export default class Module {
     return this.srcPath.includes("/pages");
   }
 
+  get isAppMod() {
+    return this.srcPath.includes("/app/");
+  }
+
+  get appPath() {
+    return path.join(this.appRoot, "/app");
+  }
+
+  get isServerMod() {
+    return this.srcPath.includes("/server/");
+  }
+
+  get serverPath() {
+    return path.join(this.appRoot, "/server");
+  }
+
   get htmlPath() {
     const dir = path.dirname(this.writePath as string);
     const filename = (this.writePath as string).replace(dir, "");
 
     return path
-      .join(dir, "../../static", filename)
+      .join(dir, "../../../static", filename)
       .replace(".js", ".html");
   }
 
@@ -168,10 +184,8 @@ export default class Module {
     }
 
     for (const key of Object.keys(result)) {
-      const cleanedKey = utils.cleanKey(
-        key,
-        path.join(this.appRoot, "/src"),
-      );
+      const cleanedKey = utils.cleanKey(key, this.appRoot);
+
       this.writePath = path.join(this.appRoot, ".tails/_tails", cleanedKey);
       const module = result[key];
 

@@ -76,13 +76,13 @@ export async function loadWebModule(
   let controllerModule;
   if (controllerName && method) {
     controllerModule = moduleHandler.modules.get(
-      `/controllers/${controllerName}.js`,
+      `/server/controllers/${controllerName}.js`,
     );
   }
 
   let controller;
   try {
-    const pageModule = moduleHandler.modules.get(`/pages/${route.page}.js`);
+    const pageModule = moduleHandler.modules.get(`/app/pages/${route.page}.js`);
     const page = (await pageModule?.import()).default;
     if (controllerModule) {
       controller = (await controllerModule?.import()).default;
