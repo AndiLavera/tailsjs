@@ -3,10 +3,12 @@ import {
   reExportPath,
   reHttp,
   reImportPath,
+  reModuleExt,
 } from "../../core/utils.ts";
 import { ensureTextFile } from "../../fs.ts";
 import { path } from "../../std.ts";
 import { CompilerOptions, CompilerPlugin } from "../../types.ts";
+import { getRelativePath } from "../../utils/getRelativePath.ts";
 
 /**
  * Handles converting non `.js` local import paths
@@ -17,10 +19,12 @@ const defaultPlugin: CompilerPlugin = {
   test: /\.(jsx|mjs|tsx|ts|js?)/g,
   acceptHMR: true,
   transform: async ({ pathname, content }, opts: CompilerOptions) => {
-    const { remoteWritePath, writeRemote } = opts;
-    if (!writeRemote && !remoteWritePath) {
+    const { remoteWritePath, writeRemote, appRoot } = opts;
+    if (!writeRemote && !remoteWritePath && !appRoot) {
       return content;
     }
+
+    if (pathname.includes("/server/")) return content;
 
     return await recurseImports({ pathname, content }, opts);
   },
@@ -30,22 +34,34 @@ async function recurseImports(
   { pathname, content }: { pathname: string; content: string },
   opts: CompilerOptions,
 ) {
+  let transformedContent = content;
   let matchedImports = content.match(reImportPath);
   matchedImports ||= content.match(reExportPath);
   matchedImports ||= [];
-  let transformedContent = content;
 
   for await (const imp of matchedImports) {
     let transformedImp = imp;
 
     // TODO: Match remaining string types
     // || path.match(reSingleQuotes) || path.match(reBackTicks)
+    // Note: Matches contain quotes: "\"https://...\""
     const importURL = imp.match(reDoubleQuotes);
     if (!importURL || !importURL[0] || !importURL[0].match(reHttp)) continue;
 
+    const to = await fetchRemote(importURL[0], opts);
+
+    const pathToAdd = !pathname.includes(".tails/_tails")
+      ? path.join(opts.appRoot as string, opts.remoteWritePath as string)
+      : path.join(opts.appRoot as string);
+
+    const from = pathname.replace(
+      opts.appRoot as string,
+      pathToAdd,
+    );
+
     transformedImp = imp.replace(
       importURL[0],
-      await fetchRemote(importURL[0], opts),
+      `"${getRelativePath(path.dirname(from), to)}"`,
     );
 
     transformedContent = transformedContent.replace(
@@ -58,14 +74,18 @@ async function recurseImports(
 }
 
 async function fetchRemote(url: string, opts: CompilerOptions) {
-  console.log(url);
-  const { remoteWritePath } = opts;
+  const { remoteWritePath, appRoot } = opts;
   const cleanURL = url.slice(1, -1); // Strip quotes from string
 
-  const writePath = path.join(
+  let writePath = path.join(
+    appRoot as string,
     remoteWritePath as string,
-    cleanURL.replace(reHttp, "-/") + ".js",
+    cleanURL.replace(reHttp, "-/"),
   );
+
+  if (!writePath.match(reModuleExt)) {
+    writePath = writePath + ".js";
+  }
 
   const asset = await fetch(cleanURL);
   if (asset.status === 200) {
@@ -76,7 +96,7 @@ async function fetchRemote(url: string, opts: CompilerOptions) {
     );
   }
 
-  return url;
+  return writePath;
 }
 
 export default defaultPlugin;

@@ -53,13 +53,7 @@ export class ModuleHandler {
   }
 
   async build(routeHandler: RouteHandler) {
-    try {
-      await this.renderAll(routeHandler);
-    } catch (err) {
-      console.log(err);
-      throw new Error("Failed to render pages");
-    }
-
+    await this.renderAll(routeHandler);
     await this.writeAll();
     await logBuildEvents(path.join(this.appRoot, ".tails"));
   }
@@ -302,7 +296,7 @@ export class ModuleHandler {
         props = new webModule.controller.imp()[route.method]();
       }
 
-      webModule.page.module.render(
+      await webModule.page.module.render(
         // deno-lint-ignore no-explicit-any
         this.appComponent as ComponentType<any>,
         // deno-lint-ignore no-explicit-any

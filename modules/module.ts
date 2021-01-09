@@ -124,7 +124,7 @@ export default class Module {
     return this.importedModule;
   }
 
-  render(
+  async render(
     // deno-lint-ignore no-explicit-any
     App: ComponentType<any>,
     // deno-lint-ignore no-explicit-any
@@ -138,7 +138,7 @@ export default class Module {
       throw new Error("Must import module before rendering");
     }
 
-    const html = generateHTML(
+    const html = await generateHTML(
       App,
       Document,
       this.importedModule.default,
@@ -177,8 +177,9 @@ export default class Module {
       result = await compiler.transform(module);
     } else {
       const transformedModule = await compiler.transform(module, {
-        remoteWritePath: path.join(this.appRoot, ".tails/_tails"),
+        remoteWritePath: ".tails/_tails",
         writeRemote: true,
+        appRoot: this.appRoot,
       });
       result = await compiler.transpile(transformedModule);
     }

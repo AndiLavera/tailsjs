@@ -55,6 +55,9 @@ function buildHMRPath(id: string) {
 }
 
 export function injectHMR(id: string, jsFile: string): string {
+  // TODO:
+  if (!jsFile.endsWith(".js")) return jsFile;
+
   let lines = [
     `import { createHotContext, RefreshRuntime, performReactRefresh } from "${
       buildHMRPath(id)
