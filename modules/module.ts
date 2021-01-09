@@ -152,7 +152,7 @@ export default class Module {
     return html;
   }
 
-  fetchHTML(
+  async fetchHTML(
     // deno-lint-ignore no-explicit-any
     App: ComponentType<any>,
     // deno-lint-ignore no-explicit-any
@@ -160,7 +160,7 @@ export default class Module {
     // deno-lint-ignore no-explicit-any
     props: Record<string, any> = {},
   ) {
-    return this.html || this.render(
+    return this.html || await this.render(
       App,
       Document,
       props,

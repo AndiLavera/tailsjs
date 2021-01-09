@@ -11,6 +11,19 @@ import { CompilerOptions, CompilerPlugin } from "../../types.ts";
 import { getRelativePath } from "../../utils/getRelativePath.ts";
 
 /**
+ * TODO:
+ * 1. Download & write react
+ * 2. Download react-dom
+ * 3. change the import __react to the react we just downloaded path
+ * 4. write react dom
+ * 5. when recursing components, ensure they use the react we just downloaded
+ * 6. ensure generateHTML.tsx uses those 2 packages instead of deps.ts
+ */
+// reactUrl: "https://esm.sh/react@17.0.1",
+// reactDomUrl: "https://esm.sh/react-dom@17.0.1"
+// /^(https?:\/\/[0-9a-z\.\-]+)?\/react(@[0-9a-z\.\-]+)?\/?$/i.test(dlUrl)
+
+/**
  * Handles converting non `.js` local import paths
  * to `.js`.
  */
@@ -25,6 +38,8 @@ const defaultPlugin: CompilerPlugin = {
     }
 
     if (pathname.includes("/server/")) return content;
+
+    await fetchReact(opts);
 
     return await recurseImports({ pathname, content }, opts);
   },
@@ -97,6 +112,72 @@ async function fetchRemote(url: string, opts: CompilerOptions) {
   }
 
   return writePath;
+}
+
+async function fetchReact(opts: CompilerOptions) {
+  const { remoteWritePath, appRoot } = opts;
+  const reactURL = "https://esm.sh/react@17.0.1";
+  const reactLocalURL = reactURL.replace(reHttp, "-/");
+  const reactDOMURL = "https://esm.sh/react-dom@17.0.1/server";
+  const reactDOMLocalURL = reactDOMURL.replace(reHttp, "-/");
+
+  const reactAsset = await fetch(reactURL);
+  const reactWritePath = path.join(
+    appRoot as string,
+    remoteWritePath as string,
+    reactLocalURL + ".js",
+  );
+
+  if (reactAsset.status === 200) {
+    const content = await reactAsset.text();
+    await ensureTextFile(
+      reactWritePath,
+      await recurseImports({ pathname: reactWritePath, content }, opts),
+    );
+  }
+
+  const reactDOMAsset = await fetch(reactDOMURL);
+  const reactDOMWritePath = path.join(
+    appRoot as string,
+    remoteWritePath as string,
+    reactDOMLocalURL + ".js",
+  );
+
+  if (reactDOMAsset.status === 200) {
+    const content = await reactDOMAsset.text();
+    const transformedContent = await recurseImports(
+      { pathname: reactDOMWritePath, content },
+      opts,
+    );
+    await ensureTextFile(
+      reactDOMWritePath,
+      transformedContent,
+    );
+
+    const importURL = transformedContent.match(reDoubleQuotes);
+    if (!importURL || !importURL[0]) {
+      throw new Error("Some error occured when compiling react-dom");
+    }
+
+    const reactDomServerPath = path.join(
+      path.dirname(reactDOMWritePath),
+      importURL[0].slice(1, -1),
+    );
+
+    const decoder = new TextDecoder();
+
+    let reactDOMServer = decoder.decode(
+      await Deno.readFile(reactDomServerPath),
+    );
+
+    // TODO: Better regex
+    reactDOMServer = reactDOMServer.replace(
+      /import __react from "\/(\w+)\/(\w+)@(\w+).(\w+).(\w+)\/(\w+)\/(\w+).js"/,
+      `import __react from "${reactWritePath}"`,
+    );
+
+    await ensureTextFile(reactDomServerPath, reactDOMServer);
+  }
 }
 
 export default defaultPlugin;

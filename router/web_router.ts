@@ -53,7 +53,11 @@ export class WebRouter {
             props = new webModule.controller.imp()[method]();
           }
 
-          const html = webModule.page.module.fetchHTML(App, Document, props);
+          const html = await webModule.page.module.fetchHTML(
+            App,
+            Document,
+            props,
+          );
           context.response.type = "text/html";
           context.response.body = html;
         } catch (error) {

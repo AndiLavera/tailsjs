@@ -10,11 +10,11 @@ export async function generateHTML(
     "/home/andrew/workspace/js/tails/examples/hello-world/.tails/_tails/-/esm.sh/react@17.0.1.js"
   )).default;
 
-  const { renderToString } = await import(
+  const ReactDOMServer = await import(
     "/home/andrew/workspace/js/tails/examples/hello-world/.tails/_tails/-/cdn.esm.sh/v14/react-dom@17.0.1/esnext/server.js"
   );
 
-  return renderToString(
+  return (ReactDOMServer as any).renderToString(
     <Document initialData={props}>
       <App Page={Component} pageProps={props} />
     </Document>,
