@@ -160,7 +160,10 @@ export default class Module {
     if (this.isPlugin) {
       result = await compiler.transform(module);
     } else {
-      const transformedModule = await compiler.transform(module);
+      const transformedModule = await compiler.transform(module, {
+        remoteWritePath: path.join(this.appRoot, ".tails/_tails"),
+        writeRemote: true,
+      });
       result = await compiler.transpile(transformedModule);
     }
 

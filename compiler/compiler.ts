@@ -1,11 +1,13 @@
-import { CompilerPlugin } from "../types.ts";
-import nonjsImports from "./plugins/nonjsImports.ts";
+import { CompilerOptions, CompilerPlugin } from "../types.ts";
+import rewriteImports from "./plugins/rewriteImports.ts";
 import cssModule from "./plugins/cssModule.ts";
 import wasm from "./plugins/wasm.ts";
 import css from "./plugins/css.ts";
+import fetchRemote from "./plugins/fetchRemote.ts";
 import { reImportPath } from "../core/utils.ts";
+import { path, walk, WalkOptions } from "../std.ts";
 
-const plugins = [nonjsImports, cssModule, wasm, css];
+const plugins = [rewriteImports, cssModule, wasm, css, fetchRemote];
 
 export function forEach(callback: (plugin: CompilerPlugin) => void) {
   return plugins.forEach((plugin) => callback(plugin));
@@ -18,7 +20,10 @@ export function forEach(callback: (plugin: CompilerPlugin) => void) {
  *
  * @param modules
  */
-export async function transform(modules: Record<string, string>) {
+export async function transform(
+  modules: Record<string, string>,
+  opts: CompilerOptions = {},
+) {
   const transformedModules: Record<string, string> = {};
 
   for await (const key of Object.keys(modules)) {
@@ -30,30 +35,32 @@ export async function transform(modules: Record<string, string>) {
 
     for await (const plugin of plugins) {
       if (module.key.match(plugin.test) && plugin.transform) {
-        const transformedContent = await plugin.transform({
+        module.content = await plugin.transform({
           pathname: module.key,
           content: module.content,
-        });
+        }, opts);
 
         let transformedPath;
         if (plugin.resolve) {
-          transformedPath = plugin.resolve(module.key);
+          transformedPath = await plugin.resolve(module.key, opts);
         }
 
         if (transformedPath) {
           module.key = transformedPath;
         }
-        module.content = await resolve(
-          transformedContent,
-        );
+        // module.content = await resolve(
+        //   transformedContent,
+        //   opts,
+        // );
 
         transformed = true;
       }
     }
 
-    if (!transformed) {
-      module.content = await resolve(module.content);
-    }
+    // if (!transformed) {
+    //   module.content = await resolve(module.content, opts);
+    // }
+    module.content = await resolve(module.content, opts);
 
     transformedModules[module.key] = module.content;
   }
@@ -67,7 +74,7 @@ export async function transform(modules: Record<string, string>) {
  *
  * @param content
  */
-async function resolve(content: string) {
+async function resolve(content: string, opts: CompilerOptions) {
   const matchedImports = content.match(reImportPath) || [];
   let transformedContent = content;
 
@@ -75,7 +82,7 @@ async function resolve(content: string) {
     for await (const plugin of plugins) {
       let transformedImp = imp;
       if (imp.match(plugin.test) && plugin.resolve) {
-        transformedImp = plugin.resolve(imp);
+        transformedImp = await plugin.resolve(imp, opts);
       }
 
       transformedContent = transformedContent.replace(imp, transformedImp);
@@ -85,20 +92,17 @@ async function resolve(content: string) {
   return transformedContent;
 }
 
-export function transformedPath(pathname: string) {
+export async function transformedPath(pathname: string) {
   let transformedPath = pathname;
 
-  for (const plugin of plugins) {
+  for await (const plugin of plugins) {
     if (pathname.match(plugin.test) && plugin.resolve) {
-      transformedPath = plugin.resolve(pathname);
+      transformedPath = await plugin.resolve(pathname, {});
     }
   }
 
   return transformedPath;
 }
-
-import { WalkOptions } from "../std.ts";
-import { path, walk } from "../std.ts";
 
 export async function walkDir(
   pathname: string,

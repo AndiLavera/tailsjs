@@ -6,7 +6,7 @@ import { CompilerPlugin } from "../../types.ts";
  * to `.js`.
  */
 const defaultPlugin: CompilerPlugin = {
-  name: "nonjs-imports",
+  name: "rewrite-imports",
   test: /\.(jsx|mjs|tsx|ts?)/g,
   acceptHMR: true,
   resolve: (url: string) => {

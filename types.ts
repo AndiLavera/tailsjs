@@ -84,6 +84,11 @@ export interface SSROptions {
   staticPaths?: string[];
 }
 
+export interface CompilerOptions {
+  writeRemote?: boolean;
+  remoteWritePath?: string;
+}
+
 /**
  * A compiler plugin for **Tails.js** application. The transform
  * methods are invoked just before transpile & just after transpiling.
@@ -108,12 +113,13 @@ export interface CompilerPlugin {
    * before transpiling to ensure unsupported imports,
    * such as css imports, are not transpiled.
    */
-  resolve?(url: string): string;
+  resolve?(url: string, opts: CompilerOptions): Promise<string> | string;
   /**
    * Handles transforming the source content before transpiling.
    */
   transform?(
     { pathname, content }: { pathname: string; content: string },
+    opts: CompilerOptions,
   ): Promise<string>;
 }
 

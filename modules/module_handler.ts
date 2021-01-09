@@ -53,9 +53,6 @@ export class ModuleHandler {
   }
 
   async build(routeHandler: RouteHandler) {
-    await this.compile(routeHandler._staticRoutes);
-    await this.setDefaultComponents();
-
     try {
       await this.renderAll(routeHandler);
     } catch (err) {
@@ -282,9 +279,11 @@ export class ModuleHandler {
     this.manifest[key] = manifestModule;
   }
 
+  // TODO: Rename renderStatic
   private async renderAll(routeHandler: RouteHandler) {
     // TODO: loadApiModule?
     for await (const route of routeHandler.routes.web.routes) {
+      // TODO: continue if static
       const webModule = await loadWebModule(
         route,
         this,
@@ -386,7 +385,7 @@ export class ModuleHandler {
     let transformedPath;
 
     if (!module) {
-      transformedPath = compiler.transformedPath(key);
+      transformedPath = await compiler.transformedPath(key);
       module = this.modules.get(transformedPath);
     }
 

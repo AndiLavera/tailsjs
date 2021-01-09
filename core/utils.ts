@@ -14,6 +14,8 @@ export const reLocaleID = /^[a-z]{2}(-[a-zA-Z0-9]+)?$/;
 export const reHashJs = new RegExp(`\\.[0-9a-fx]{${hashShort}}\\.js$`, "i");
 export const reImportPath =
   /import\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
+export const reExportPath =
+  /export\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g;
 export const reDoubleQuotes = /"([^\\"]|\\\\|\\")*"/;
 export const reExportDefaultFunction = /export default function (\w+)/;
 export const reExportDefault = /export default (\w+)/;
