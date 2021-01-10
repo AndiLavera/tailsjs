@@ -370,14 +370,10 @@ export class ModuleHandler {
         const transformedPath = await this.recompile(path);
         await routeHandler.reloadModule(path);
 
-        const cleanPath = transformedPath
-          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
-        console.log(cleanPath);
-
         this.eventListeners.forEach((eventListener) => {
           eventListener.emit(
-            `${event.kind}-${cleanPath}`,
-            cleanPath,
+            `${event.kind}-${transformedPath}`,
+            transformedPath,
           );
         });
 
