@@ -31,7 +31,6 @@ export async function transform(
       key,
       content: modules[key],
     };
-    let transformed = false;
 
     for await (const plugin of plugins) {
       if (module.key.match(plugin.test) && plugin.transform) {
@@ -48,20 +47,10 @@ export async function transform(
         if (transformedPath) {
           module.key = transformedPath;
         }
-        // module.content = await resolve(
-        //   transformedContent,
-        //   opts,
-        // );
-
-        transformed = true;
       }
     }
 
-    // if (!transformed) {
-    //   module.content = await resolve(module.content, opts);
-    // }
     module.content = await resolve(module.content, opts);
-
     transformedModules[module.key] = module.content;
   }
 

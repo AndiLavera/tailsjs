@@ -179,7 +179,7 @@ export default class Module {
       result = await compiler.transform(module);
     } else {
       const transformedModule = await compiler.transform(module, {
-        remoteWritePath: ".tails/_tails",
+        buildDir: this.config.buildDir,
         appRoot: this.config.appRoot,
         reactLocalPath: this.config.reactWritePath,
         reactDOMLocalPath: this.config.reactServerWritePath,
@@ -191,8 +191,7 @@ export default class Module {
       const cleanedKey = utils.cleanKey(key, this.config.appRoot);
 
       this.writePath = path.join(
-        this.config.appRoot,
-        ".tails/_tails",
+        this.config.buildDir,
         cleanedKey,
       );
       const module = result[key];
@@ -209,7 +208,7 @@ export default class Module {
 
     return utils.removeDir(
       this.writePath as string,
-      path.join(this.config.appRoot, ".tails/_tails"),
+      this.config.buildDir,
     );
   }
 

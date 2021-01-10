@@ -90,10 +90,12 @@ export class ModuleHandler {
       reactDOMWritePath,
       reactWritePath,
       reactServerWritePath,
+      reactHmrWritePath,
     } = await fetchReactAssets(this.config);
     this.config.reactWritePath = reactWritePath;
     this.config.reactDOMWritePath = reactDOMWritePath;
     this.config.reactServerWritePath = reactServerWritePath;
+    this.config.reactHmrWritePath = reactHmrWritePath;
 
     const decoder = new TextDecoder();
     const walkOptions = {

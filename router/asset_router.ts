@@ -96,16 +96,16 @@ export default class AssetRouter {
   }
 
   private async setAssetRoutes() {
-    const assetDir = path.join(this.config.appRoot, ".tails/_tails");
+    const buildDir = this.config.buildDir;
 
     log.debug("JS Asset Routes:");
-    for await (const { path: assetFilePath } of walk(assetDir)) {
+    for await (const { path: assetFilePath } of walk(buildDir)) {
       if (assetFilePath.includes("/server/")) continue;
 
       if ((await Deno.lstat(assetFilePath)).isDirectory) continue;
 
       const route = assetFilePath
-        .replace(assetDir, "")
+        .replace(buildDir, "")
         .replace("/app", "")
         .replace("/pages", "");
 
@@ -121,7 +121,7 @@ export default class AssetRouter {
         }
 
         context.response.body = assetFilePath.includes("/app/")
-          ? injectHMR(assetFilePath.replace(assetDir, ""), file)
+          ? injectHMR(assetFilePath.replace(buildDir, ""), file)
           : file;
       });
     }
@@ -164,15 +164,28 @@ export default class AssetRouter {
   private async setHMRAssetRoutes() {
     const hmrData = await this.fetchTailsAsset("/hmr/hmr.ts");
     const eventData = await this.fetchTailsAsset("/hmr/events.ts");
-
     const hmrContent = await Deno.transpileOnly({
       "hmr.ts": hmrData,
       "events.ts": eventData,
     });
 
+    const reactHmrPath = this.config.reactHmrWritePath?.replace(
+      this.config.buildDir,
+      "",
+    );
+
+    let hmrSource = hmrContent["hmr.ts"].source;
+    hmrSource = `import runtime from "${reactHmrPath}";` + hmrSource;
+
+    // TODO: Remove after upgrading versions
+    hmrSource = hmrSource.replace(
+      'import runtime from "https://esm.sh/react-refresh@0.8.3/runtime?dev";',
+      "",
+    );
+
     this.router.get("/_hmr.ts", (context: Context) => {
       context.response.type = "application/javascript";
-      context.response.body = hmrContent["hmr.ts"].source;
+      context.response.body = hmrSource;
     });
 
     this.router.get("/events.ts", (context: Context) => {

@@ -56,6 +56,12 @@ export class Configuration {
    */
   reactServerWritePath?: string;
 
+  /**
+   * The path React-Refresh runtime was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactHmrWritePath?: string;
+
   /** The root dir of the users application */
   readonly appRoot: string;
 
@@ -67,11 +73,24 @@ export class Configuration {
 
   readonly mode: "test" | "development" | "production";
 
-  /** `reactUrl` specifies the **react** download URL (default is 'https://esm.sh/react@16.14.0'). */
+  /** `reactUrl` specifies the **react** download URL
+   * (default is 'https://esm.sh/react@17.0.1').
+   */
   readonly reactUrl: string;
-  /** `reactDomUrl` specifies the **react-dom** download URL (default is 'https://esm.sh/react-dom@16.14.0'). */
+
+  /** `reactDomUrl` specifies the **react-dom** download URL
+   * (default is 'https://esm.sh/react-dom@17.0.1').
+   */
   readonly reactDomUrl: string;
+
+  /** `reacHmrtUrl` specifies the **react HMR runtime** download URL
+   * (default is 'https://esm.sh/react-refresh@0.8.3/runtime').
+   */
+  readonly reactHmrUrl: string;
+
   readonly importMap: Readonly<{ imports: Record<string, string> }>;
+
+  readonly reload: boolean;
 
   // private readonly CONFIG_FILES: Array<string>;
 
@@ -79,11 +98,13 @@ export class Configuration {
     appDir: string,
     mode: "test" | "development" | "production",
     building: boolean = false,
+    reload: boolean = false,
   ) {
     this.appRoot = path.resolve(appDir);
     this.appDir = path.join(this.appRoot, "app");
     this.serverDir = path.join(this.appRoot, "server");
     this.mode = mode;
+    this.reload = reload;
     this.outputDir = "/dist";
     this.baseUrl = "/";
     this.mainJSPath = "/main.js";
@@ -95,6 +116,7 @@ export class Configuration {
     this.isBuilding = building;
     this.reactUrl = "https://esm.sh/react@17.0.1";
     this.reactDomUrl = "https://esm.sh/react-dom@17.0.1";
+    this.reactHmrUrl = "https://esm.sh/react-refresh@0.8.3/runtime";
     this.plugins = [];
     this.postcss = {
       plugins: [

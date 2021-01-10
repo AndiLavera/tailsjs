@@ -1,4 +1,5 @@
-import runtime from "https://esm.sh/react-refresh@0.8.3/runtime?dev";
+// Note: Runtime is injected when building the route. This is so
+// react-refresh-runtime can be compiled and served locally.
 import events from "./events.ts";
 
 interface Callback {

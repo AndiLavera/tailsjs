@@ -40,7 +40,7 @@ export async function recurseImports(
     }
 
     const pathToAdd = !pathname.includes(".tails/_tails")
-      ? path.join(opts.appRoot as string, opts.remoteWritePath as string)
+      ? opts.buildDir as string
       : path.join(opts.appRoot as string);
 
     const from = pathname.replace(
@@ -63,12 +63,11 @@ export async function recurseImports(
 }
 
 export async function fetchRemote(url: string, opts: CompilerOptions) {
-  const { remoteWritePath, appRoot } = opts;
+  const { buildDir } = opts;
   const cleanURL = url;
 
   let writePath = path.join(
-    appRoot as string,
-    remoteWritePath as string,
+    buildDir as string,
     cleanURL.replace(reHttp, "-/"),
   );
 

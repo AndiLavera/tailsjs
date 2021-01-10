@@ -85,7 +85,7 @@ export interface SSROptions {
 }
 
 export interface CompilerOptions {
-  remoteWritePath?: string;
+  buildDir?: string;
   appRoot?: string;
   reactLocalPath?: string;
   reactDOMLocalPath?: string;
