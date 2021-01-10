@@ -175,12 +175,11 @@ export default class AssetRouter {
     );
 
     let hmrSource = hmrContent["hmr.ts"].source;
-    hmrSource = `import runtime from "${reactHmrPath}";` + hmrSource;
 
-    // TODO: Remove after upgrading versions
+    // Remove the remote import
     hmrSource = hmrSource.replace(
       'import runtime from "https://esm.sh/react-refresh@0.8.3/runtime?dev";',
-      "",
+      `import runtime from "${reactHmrPath}";`,
     );
 
     this.router.get("/_hmr.ts", (context: Context) => {

@@ -1,5 +1,10 @@
-// Note: Runtime is injected when building the route. This is so
-// react-refresh-runtime can be compiled and served locally.
+/**
+ * Note: Runtime remote import is replace with a local import
+ * when the route is set. This is so react-refresh-runtime can
+ * be served locally. This import exists so we don't break
+ * anything when transpiling
+ */
+import runtime from "https://esm.sh/react-refresh@0.8.3/runtime?dev";
 import events from "./events.ts";
 
 interface Callback {

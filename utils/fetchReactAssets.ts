@@ -11,6 +11,10 @@ import { getRelativePath } from "./getRelativePath.ts";
 import { recurseImports } from "./recurseImports.ts";
 import log from "../logger/logger.ts";
 
+// TODO: Both react & react dev get written as the same file name
+// if you "build" & then run dev, react-refresh will break because
+// react will be the production version while refresh is the dev version.
+
 /**
  * Handles fetching react, react-dom, react-dom server & react
  * refresh runtime, compiling them locally & rewriting import

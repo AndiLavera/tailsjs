@@ -226,7 +226,7 @@ export default class Module {
           this.html,
         );
       }
-      if (this.map) {
+      if (this.map && !this.isServerMod) {
         await ensureTextFile(
           this.writePath + ".map",
           this.map,

@@ -96,10 +96,15 @@ export function injectHMR(id: string, jsFile: string): string {
     // TODO: I have no idea why the matched result will be:
     // [ "export default function Logo", "Logo" ]
     // And that should be figured out
+    // TODO: Sometimes this matches null because jsFile empty?
     let matchedExport = jsContent.match(reExportDefaultFunction);
     matchedExport ||= jsContent.match(reExportDefault);
     matchedExport ||= jsContent.match(reExportConst) as RegExpMatchArray;
     log.debug(`injectHMR Matches: ${matchedExport}`);
+    if (matchedExport === null) {
+      console.log("JSFILE:");
+      console.log(jsFile);
+    }
 
     const matchedConst = matchedExport[matchedExport.length - 1];
 
