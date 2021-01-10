@@ -32,7 +32,6 @@ export default class AssetRouter {
     }
 
     await this.setDefaultRoutes();
-    await this.setPublicRoutes();
     await this.setAssetRoutes();
   }
 
@@ -75,26 +74,6 @@ export default class AssetRouter {
     });
   }
 
-  /**
-   * Handles walking the users `/public` dir
-   * and adding each asset to the router.
-   */
-  private async setPublicRoutes() {
-    const publicDir = path.join(this.config.appRoot, "public");
-
-    for await (const { path: staticFilePath } of walk(publicDir)) {
-      if (publicDir === staticFilePath) continue;
-
-      const file = await this.fetchStaticAsset(staticFilePath);
-      const route = staticFilePath.replace(publicDir, "");
-
-      this.router.get(route, (context: Context) => {
-        context.response.type = getContentType(route);
-        context.response.body = file;
-      });
-    }
-  }
-
   private async setAssetRoutes() {
     const buildDir = this.config.buildDir;
 
@@ -107,7 +86,8 @@ export default class AssetRouter {
       const route = assetFilePath
         .replace(buildDir, "")
         .replace("/app", "")
-        .replace("/pages", "");
+        .replace("/pages", "")
+        .replace("/public", "");
 
       log.debug(route);
 
@@ -176,7 +156,6 @@ export default class AssetRouter {
 
     let hmrSource = hmrContent["hmr.ts"].source;
 
-    // Remove the remote import
     hmrSource = hmrSource.replace(
       'import runtime from "https://esm.sh/react-refresh@0.8.3/runtime?dev";',
       `import runtime from "${reactHmrPath}";`,

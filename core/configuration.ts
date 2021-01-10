@@ -162,7 +162,7 @@ export class Configuration {
   get buildDir() {
     return path.join(
       this.appRoot,
-      ".tails/_tails",
+      ".tails",
     );
   }
 

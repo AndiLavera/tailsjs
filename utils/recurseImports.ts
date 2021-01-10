@@ -50,7 +50,7 @@ export async function recurseImports(
       to = await fetchRemote(url, opts);
     }
 
-    const pathToAdd = !pathname.includes(".tails/_tails")
+    const pathToAdd = !pathname.includes(".tails")
       ? opts.buildDir as string
       : path.join(opts.appRoot as string);
 

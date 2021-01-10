@@ -240,10 +240,7 @@ export class ModuleHandler {
   async writeAll(): Promise<void> {
     await this.writeModules();
     await this.writeManifest();
-
-    if (this.config.isBuilding) {
-      await this.writePublic();
-    }
+    await this.writePublic();
   }
 
   private async writePublic() {
@@ -258,7 +255,7 @@ export class ModuleHandler {
       const data = await Deno.readFile(staticFilePath);
 
       await ensureTextFile(
-        path.join(this.appRoot, ".tails/public", filename),
+        path.join(this.config.buildDir, "public", filename),
         decoder.decode(data),
       );
     }
