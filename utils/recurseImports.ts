@@ -75,11 +75,10 @@ export async function recurseImports(
 
 export async function fetchRemote(url: string, opts: CompilerOptions) {
   const { buildDir, isBuilding, reload } = opts;
-  const cleanURL = url;
 
   let writePath = path.join(
     buildDir as string,
-    cleanURL.replace(reHttp, "-/"),
+    url.replace(reHttp, "-/"),
   );
 
   if (!writePath.match(reModuleExt)) {
@@ -90,9 +89,9 @@ export async function fetchRemote(url: string, opts: CompilerOptions) {
     return writePath;
   }
 
-  log.debug(`Downloading ${cleanURL}`);
+  log.debug(`Downloading ${url}`);
 
-  const asset = await fetch(cleanURL);
+  const asset = await fetch(url);
   if (asset.status === 200) {
     const content = await asset.text();
     await ensureTextFile(

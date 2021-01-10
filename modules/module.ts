@@ -104,7 +104,7 @@ export default class Module {
     const filename = (this.writePath as string).replace(dir, "");
 
     return path
-      .join(dir, "../../../static", filename)
+      .join(this.config.buildDir, filename)
       .replace(".js", ".html");
   }
 
@@ -217,6 +217,7 @@ export default class Module {
   async retranspile() {
     await this.loadFile();
     await this.transpile();
+    await this.write();
   }
 
   async write() {

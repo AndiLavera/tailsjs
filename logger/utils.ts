@@ -17,7 +17,7 @@ export async function logBuildEvents(buildPath: string) {
     const htmlPath = path.join(staticPath, filename.replace(".js", ".html"));
 
     let logString = "  ";
-    if (existsFile(htmlPath)) {
+    if (await existsFile(htmlPath)) {
       logString = logString + "● ";
     } else {
       logString = logString + "λ ";

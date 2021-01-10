@@ -8,10 +8,10 @@ import Module from "../modules/module.ts";
 import * as compiler from "../compiler/compiler.ts";
 import utils from "../modules/utils.ts";
 import * as renderer from "../modules/renderer.ts";
-import { Manifest, ManifestModule, WebModules } from "../types.ts";
+import { Manifest, ManifestModule } from "../types.ts";
 import { loadWebModule } from "../router/web_router.ts";
 import { path, walk } from "../std.ts";
-import { logBuildEvents } from "../utils/logBuildEvents.ts";
+import { logBuildEvents } from "../logger/utils.ts";
 import { fetchReactAssets } from "../utils/fetchReactAssets.ts";
 
 export class ModuleHandler {
@@ -360,7 +360,7 @@ export class ModuleHandler {
       if (event.kind !== "modify") continue;
 
       reloading = true;
-      for (const path of event.paths) {
+      for await (const path of event.paths) {
         const startTime = performance.now();
         const fileName = path.split("/").slice(-1)[0];
         // TODO: Remove file from modules if deleted?
@@ -373,10 +373,7 @@ export class ModuleHandler {
         const transformedPath = await this.recompile(path);
         await routeHandler.reloadModule(path);
 
-        // TODO: utils.cleanKey?
-        const cleanPath = (transformedPath || path)
-          .replace(`${this.config.appRoot}`, "")
-          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
+        const cleanPath = utils.cleanKey(transformedPath, this.config.appRoot);
 
         this.eventListeners.forEach((eventListener) => {
           eventListener.emit(
@@ -392,7 +389,7 @@ export class ModuleHandler {
         );
       }
 
-      setTimeout(() => (reloading = false), 500);
+      setTimeout(() => (reloading = false), 100);
     }
   }
 
@@ -417,7 +414,6 @@ export class ModuleHandler {
     }
 
     await module.retranspile();
-    await module.write();
-    return transformedPath;
+    return transformedPath || key;
   }
 }

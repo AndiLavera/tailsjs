@@ -1,15 +1,5 @@
-// import { renderToString } from "../deps.ts";
-
 import { ComponentType } from "../deps.ts";
 
-// {
-//   app: App,
-//   document: Document,
-//   component: this.importedModule.default,
-//   props,
-//   reactURL: this.reactURL,
-//   reactServerURL: this.reactServerURL,
-// }
 export async function generateHTML(renderData: {
   App: ComponentType<any>;
   Document: any;

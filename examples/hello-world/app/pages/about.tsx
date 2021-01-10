@@ -9,7 +9,7 @@ const About = ({ version }: { version: string }) => {
   const [count, setCount] = useState(0);
 
   const garden = {
-    backgroundColor: "green",
+    backgroundColor: "red",
     height: "auto",
     fontSize: "30px",
     maxWidth: "900px",

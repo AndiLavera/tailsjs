@@ -135,7 +135,9 @@ export async function compileRemoteAsset(
     remoteURL = remoteURL + "?dev";
   }
 
-  const localUrl = url.replace(reHttp, "-/");
+  const localUrl = remoteURL
+    .replace(reHttp, "-/")
+    .replace("?dev", ".development");
   let writePath = path.join(buildDir, localUrl);
   if (!writePath.match(reModuleExt)) {
     writePath = writePath + ".js";

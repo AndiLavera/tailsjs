@@ -119,15 +119,11 @@ export class Application {
     }
 
     if (reload) {
-      if (existsDirSync(this.buildDir)) {
-        await Deno.remove(this.buildDir, { recursive: true });
+      if (existsDirSync(this.config.buildDir)) {
+        await Deno.remove(this.config.buildDir, { recursive: true });
       }
 
-      await ensureDir(this.buildDir);
-    }
-
-    if (this.config.isDev) {
-      // this._watch();
+      await ensureDir(this.config.buildDir);
     }
   }
 }
