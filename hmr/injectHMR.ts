@@ -55,6 +55,9 @@ function buildHMRPath(id: string) {
 }
 
 export function injectHMR(id: string, jsFile: string): string {
+  // TODO:
+  if (!id.endsWith(".js")) return jsFile;
+
   let lines = [
     `import { createHotContext, RefreshRuntime, performReactRefresh } from "${
       buildHMRPath(id)
@@ -66,9 +69,9 @@ export function injectHMR(id: string, jsFile: string): string {
 
   lines = lines.concat(imports);
 
-  const reactRefresh = id.endsWith(".js") ||
-    id.endsWith(".md") ||
-    id.endsWith(".mdx");
+  const reactRefresh = (jsFile.includes("import React") && id.endsWith(".js"));
+  // TODO: Add support for .md files?
+  // ||id.endsWith(".md") || id.endsWith(".mdx");
 
   if (reactRefresh) {
     lines.push("");
@@ -97,6 +100,10 @@ export function injectHMR(id: string, jsFile: string): string {
     matchedExport ||= jsContent.match(reExportDefault);
     matchedExport ||= jsContent.match(reExportConst) as RegExpMatchArray;
     log.debug(`injectHMR Matches: ${matchedExport}`);
+    if (matchedExport === null) {
+      console.log("JSFILE:");
+      console.log(jsFile);
+    }
 
     const matchedConst = matchedExport[matchedExport.length - 1];
 

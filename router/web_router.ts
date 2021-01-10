@@ -2,8 +2,6 @@ import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../modules/module_handler.ts";
 import { Context, Router as OakRouter } from "../deps.ts";
 import { WebModule, WebModules, WebRoute, WebRoutes } from "../types.ts";
-import { generateHTML } from "../utils/generateHTML.tsx";
-import { fetchHtml } from "../utils/fetchHTML.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
 import Module from "../modules/module.ts";
 
@@ -55,7 +53,11 @@ export class WebRouter {
             props = new webModule.controller.imp()[method]();
           }
 
-          const html = webModule.page.module.fetchHTML(App, Document, props);
+          const html = await webModule.page.module.fetchHTML(
+            App,
+            Document,
+            props,
+          );
           context.response.type = "text/html";
           context.response.body = html;
         } catch (error) {
@@ -76,13 +78,13 @@ export async function loadWebModule(
   let controllerModule;
   if (controllerName && method) {
     controllerModule = moduleHandler.modules.get(
-      `/controllers/${controllerName}.js`,
+      `/server/controllers/${controllerName}.js`,
     );
   }
 
   let controller;
   try {
-    const pageModule = moduleHandler.modules.get(`/pages/${route.page}.js`);
+    const pageModule = moduleHandler.modules.get(`/app/pages/${route.page}.js`);
     const page = (await pageModule?.import()).default;
     if (controllerModule) {
       controller = (await controllerModule?.import()).default;

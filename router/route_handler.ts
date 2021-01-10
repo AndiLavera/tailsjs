@@ -32,8 +32,8 @@ export class RouteHandler {
     this.webModules = {};
     this.serverRouters = [];
 
-    this.controllersDir = path.join(config.appRoot, ".tails/src/controllers");
-    this.pagesDir = path.join(config.appRoot, ".tails/src/pages");
+    this.controllersDir = path.join(config.rootDir, ".tails/src/controllers");
+    this.pagesDir = path.join(config.rootDir, ".tails/src/pages");
 
     this.config = config;
     this.moduleHandler = moduleHandler;
@@ -70,7 +70,7 @@ export class RouteHandler {
   }
 
   async prepareRouter(): Promise<void> {
-    const routePath = path.join(this.config.appRoot, "config/routes.ts");
+    const routePath = path.join(this.config.rootDir, "config/routes.ts");
     if (existsFileSync(routePath)) {
       const { default: routes } = await import("file://" + routePath);
       this.routes = routes;
@@ -94,7 +94,8 @@ export class RouteHandler {
 
   async reloadModule(pathname: string) {
     const srcPath = pathname
-      .replace(this.config.srcDir, "")
+      .replace(this.config.appDir, "")
+      .replace(this.config.serverDir, "")
       .replace(reModuleExt, ".js");
 
     if (srcPath.includes("/controllers")) {

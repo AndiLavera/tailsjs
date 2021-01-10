@@ -8,7 +8,7 @@ const defaultPlugin: CompilerPlugin = {
   walkOptions: {
     exts: [".module.css"],
   },
-  resolve: (url: string) => url.replace(/\.css/, ".css.js"),
+  resolve: (url: string) => url.replace(".css", ".css.js"),
   async transform({ content }) {
     const transformedContent = await cssTransform(content);
 

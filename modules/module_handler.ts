@@ -4,13 +4,14 @@ import { Configuration } from "../core/configuration.ts";
 import log from "../logger/logger.ts";
 import { RouteHandler } from "../router/route_handler.ts";
 import { EventEmitter } from "../hmr/events.ts";
-import Module from "../modules/module.ts";
+import Module from "./module.ts";
 import * as compiler from "../compiler/compiler.ts";
-import * as plugins from "../compiler/plugins.ts";
-import utils from "../modules/utils.ts";
-import * as renderer from "../modules/renderer.ts";
-import { Manifest, ManifestModule, WebModules } from "../types.ts";
+import utils from "./utils.ts";
+import { Manifest, ManifestModule } from "../types.ts";
 import { loadWebModule } from "../router/web_router.ts";
+import { path, walk } from "../std.ts";
+import { logBuildEvents } from "../logger/utils.ts";
+import { fetchReactAssets } from "../utils/fetchReactAssets.ts";
 
 export class ModuleHandler {
   // deno-lint-ignore no-explicit-any
@@ -26,12 +27,19 @@ export class ModuleHandler {
   constructor(config: Configuration) {
     this.config = config;
     this.modules = new Map();
-    this.manifest = {};
     this.eventListeners = [];
+    this.manifest = {
+      modules: {},
+      reactLocalPaths: {
+        reactPath: "",
+        reactDomPath: "",
+        reactDomServerPath: "",
+      },
+    };
   }
 
   get appRoot(): string {
-    return this.config.appRoot;
+    return this.config.rootDir;
   }
 
   async init(
@@ -40,7 +48,9 @@ export class ModuleHandler {
   ): Promise<void> {
     // TODO: Make use of config.isBuilding
     if (this.config.mode === "production" && !options.building) {
-      await this.loadManifest();
+      this.manifest = await utils.loadManifest(
+        path.join(this.config.buildDir, "/manifest.json"),
+      );
       await this.setManifestModules();
       await this.setDefaultComponents();
       return;
@@ -52,17 +62,9 @@ export class ModuleHandler {
   }
 
   async build(routeHandler: RouteHandler) {
-    await this.compile(routeHandler._staticRoutes);
-    await this.setDefaultComponents();
-
-    try {
-      await this.renderAll(routeHandler);
-    } catch (err) {
-      console.log(err);
-      throw new Error("Failed to render pages");
-    }
-
+    await this.renderAll(routeHandler);
     await this.writeAll();
+    await logBuildEvents(path.join(this.appRoot, ".tails"));
   }
 
   get(key: string): Module | undefined {
@@ -92,102 +94,25 @@ export class ModuleHandler {
   }
 
   private async compile(staticRoutes: string[]) {
-    const decoder = new TextDecoder();
-    const walkOptions = {
-      includeDirs: true,
-      exts: [".js", ".ts", ".mjs", ".jsx", ".tsx"],
-      skip: [/^\./, /\.d\.ts$/i, /\.(test|spec|e2e)\.m?(j|t)sx?$/i],
-    };
-
-    /**
-     * Handles fetching the file, creating a new modules, transpiling it
-     * & setting it into `this.modules`.
-     *
-     * @param pathname
-     */
-    const loadModule = async (pathname: string) => {
-      const data = await Deno.readFile(pathname);
-      const cleanedKey = utils.cleanKey(pathname, this.config.srcDir);
-
-      const module = new Module({
-        fullpath: pathname,
-        content: decoder.decode(data),
-        isStatic: renderer.isStatic(staticRoutes, cleanedKey),
-        isPlugin: false,
-        appRoot: this.appRoot,
-      });
-
-      const key = await module.transpile();
-      this.modules.set(key, module);
-    };
-
-    await compiler.walkDir(
-      this.config.srcDir,
-      loadModule,
-      walkOptions,
+    this.setReactPaths(
+      await fetchReactAssets(this.config),
     );
 
-    let exts: string[] = [];
-    let skip: RegExp[] = [];
-    const includeDirs = true;
-
-    plugins.forEach(({ walkOptions }) => {
-      if (walkOptions) {
-        if (walkOptions.exts) {
-          exts = exts.concat(walkOptions.exts);
-        }
-
-        if (walkOptions.skip) {
-          skip = skip.concat(walkOptions.skip);
-        }
-      }
-    });
-
-    /**
-     * Handles fetching the file, creating a new modules, transpiling it
-     * & setting it into `this.modules`.
-     *
-     * @param pathname
-     */
-    const loadPlugin = async (pathname: string) => {
-      const data = await Deno.readFile(pathname);
-      const cleanedKey = utils.cleanKey(pathname, this.config.srcDir);
-
-      const module = new Module({
-        fullpath: pathname,
-        content: decoder.decode(data),
-        isStatic: renderer.isStatic(staticRoutes, cleanedKey),
-        isPlugin: true,
-        appRoot: this.appRoot,
-      });
-
-      const key = await module.transpile();
-      this.modules.set(key, module);
-    };
-
-    const pluginWalkOptions = {
-      includeDirs,
-      exts,
-      skip,
-    };
-
-    await compiler.walkDir(
-      this.config.srcDir,
-      loadPlugin,
-      pluginWalkOptions,
+    await compiler.compileApplication(
+      staticRoutes,
+      this.modules,
+      this.config,
     );
   }
 
-  private async loadManifest(): Promise<void> {
-    const path = `${this.appRoot}/.tails/manifest.json`;
-    const decoder = new TextDecoder("utf-8");
-
-    try {
-      const data = await Deno.readFile(path);
-      this.manifest = JSON.parse(decoder.decode(data));
-    } catch {
-      throw new Error(`Cannot load manifest. Path tried: ${path}`);
-    }
+  /**
+   * Writes all files in `this.modules`, the manifest
+   * & in the public dir
+   */
+  async writeAll(): Promise<void> {
+    await this.writeModules();
+    await this.writeManifest();
+    await this.writePublic();
   }
 
   /**
@@ -196,8 +121,8 @@ export class ModuleHandler {
   private async setManifestModules() {
     const decoder = new TextDecoder();
 
-    for await (const key of Object.keys(this.manifest)) {
-      const { modulePath, htmlPath } = this.manifest[key];
+    for await (const key of Object.keys(this.manifest.modules)) {
+      const { modulePath, htmlPath } = this.manifest.modules[key];
 
       const moduleData = await Deno.readFile(modulePath);
       let htmlData;
@@ -205,33 +130,43 @@ export class ModuleHandler {
         htmlData = await Deno.readFile(htmlPath);
       }
 
+      // TODO: Manifest should include react url
       const module = new Module({
         fullpath: modulePath,
         content: decoder.decode(moduleData),
         html: htmlPath ? decoder.decode(htmlData) : undefined,
         isStatic: !!htmlPath,
         isPlugin: false,
-        appRoot: this.appRoot,
         writePath: modulePath,
         source: decoder.decode(moduleData),
+        config: this.config,
       });
 
-      await module.import();
+      // await module.import();
       this.set(key, module);
     }
+
+    this.config.reactWritePath = this.manifest.reactLocalPaths.reactPath;
+    this.config.reactDOMWritePath = this.manifest.reactLocalPaths.reactDomPath;
+    this.config.reactServerWritePath =
+      this.manifest.reactLocalPaths.reactDomServerPath;
   }
 
-  /**
-   * Writes all files in `modules` to `${appRoot}/.tails/`
-   */
-  async writeAll(): Promise<void> {
-    await this.writeModules();
-    await this.writeManifest();
+  private async writePublic() {
+    const publicDir = path.join(this.appRoot, "public");
+    const decoder = new TextDecoder();
 
-    if (this.config.mode === "production") {
-      // TODO:
-      // await this.writeHTML();
-      // Copy files to /dist
+    for await (const { path: staticFilePath } of walk(publicDir)) {
+      if (publicDir === staticFilePath) continue;
+
+      const dir = path.dirname(staticFilePath);
+      const filename = staticFilePath.replace(dir, "");
+      const data = await Deno.readFile(staticFilePath);
+
+      await ensureTextFile(
+        path.join(this.config.buildDir, "public", filename),
+        decoder.decode(data),
+      );
     }
   }
 
@@ -258,15 +193,17 @@ export class ModuleHandler {
     };
 
     if (module.isStatic) {
-      manifestModule.htmlPath = module.writePath?.replace(".js", ".html");
+      manifestModule.htmlPath = module.htmlPath;
     }
 
-    this.manifest[key] = manifestModule;
+    this.manifest.modules[key] = manifestModule;
   }
 
+  // TODO: Rename renderStatic
   private async renderAll(routeHandler: RouteHandler) {
     // TODO: loadApiModule?
     for await (const route of routeHandler.routes.web.routes) {
+      // TODO: continue if static
       const webModule = await loadWebModule(
         route,
         this,
@@ -278,7 +215,7 @@ export class ModuleHandler {
         props = new webModule.controller.imp()[route.method]();
       }
 
-      webModule.page.module.render(
+      await webModule.page.module.render(
         // deno-lint-ignore no-explicit-any
         this.appComponent as ComponentType<any>,
         // deno-lint-ignore no-explicit-any
@@ -293,8 +230,10 @@ export class ModuleHandler {
    * `writeAll` as loadXComponent expects the manifest to be built.
    */
   private async setDefaultComponents(): Promise<void> {
-    this.appComponent = await this.loadComponent("/pages/_app.js");
-    this.documentComponent = await this.loadComponent("/pages/_document.js");
+    this.appComponent = await this.loadComponent("/app/pages/_app.js");
+    this.documentComponent = await this.loadComponent(
+      "/app/pages/_document.js",
+    );
   }
 
   // deno-lint-ignore no-explicit-any
@@ -316,7 +255,8 @@ export class ModuleHandler {
   async watch(routeHandler: RouteHandler) {
     log.info("Start watching code changes...");
 
-    const watch = Deno.watchFs(this.config.srcDir, { recursive: true });
+    // TODO: Watch controllers
+    const watch = Deno.watchFs(this.config.appDir, { recursive: true });
     let reloading = false;
 
     for await (const event of watch) {
@@ -326,7 +266,7 @@ export class ModuleHandler {
       if (event.kind !== "modify") continue;
 
       reloading = true;
-      for (const path of event.paths) {
+      for await (const path of event.paths) {
         const startTime = performance.now();
         const fileName = path.split("/").slice(-1)[0];
         // TODO: Remove file from modules if deleted?
@@ -339,15 +279,10 @@ export class ModuleHandler {
         const transformedPath = await this.recompile(path);
         await routeHandler.reloadModule(path);
 
-        // TODO: utils.cleanKey?
-        const cleanPath = (transformedPath || path)
-          .replace(`${this.config.assetDir}`, "")
-          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
-
         this.eventListeners.forEach((eventListener) => {
           eventListener.emit(
-            `${event.kind}-${cleanPath}`,
-            cleanPath,
+            `${event.kind}-${transformedPath}`,
+            transformedPath,
           );
         });
 
@@ -358,17 +293,18 @@ export class ModuleHandler {
         );
       }
 
-      setTimeout(() => (reloading = false), 500);
+      setTimeout(() => (reloading = false), 100);
     }
   }
 
   private async recompile(filePath: string) {
-    const key = utils.cleanKey(filePath, this.config.srcDir);
+    const key = utils.cleanKey(filePath, this.config.rootDir);
+
     let module = this.modules.get(key);
     let transformedPath;
 
     if (!module) {
-      transformedPath = plugins.transformedPath(key);
+      transformedPath = await compiler.transformedPath(key);
       module = this.modules.get(transformedPath);
     }
 
@@ -382,7 +318,26 @@ export class ModuleHandler {
     }
 
     await module.retranspile();
-    await module.write();
-    return transformedPath;
+    return transformedPath || key;
+  }
+
+  private setReactPaths({
+    reactDOMWritePath,
+    reactWritePath,
+    reactServerWritePath,
+    reactHmrWritePath,
+  }: {
+    reactDOMWritePath: string;
+    reactWritePath: string;
+    reactServerWritePath: string;
+    reactHmrWritePath: string | undefined;
+  }) {
+    this.config.reactWritePath = reactWritePath;
+    this.config.reactDOMWritePath = reactDOMWritePath;
+    this.config.reactServerWritePath = reactServerWritePath;
+    this.config.reactHmrWritePath = reactHmrWritePath;
+    this.manifest.reactLocalPaths.reactPath = reactWritePath;
+    this.manifest.reactLocalPaths.reactDomPath = reactDOMWritePath;
+    this.manifest.reactLocalPaths.reactDomServerPath = reactServerWritePath;
   }
 }

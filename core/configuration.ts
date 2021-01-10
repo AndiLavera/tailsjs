@@ -11,12 +11,19 @@ import util, { reLocaleID } from "./utils.ts";
 export class Configuration {
   /** `env` appends env variables (use `Deno.env.get(key)` to get an env variable) */
   env: Record<string, string>;
+
   /** `buildTarget` specifies the build target for **tsc** (possible values: '**ES2015**' - '**ES2020**' | '**ESNext**', default is **ES2015** for `production` and **ES2018** for `development`). */
   buildTarget: string;
+
   /** A list of plugin of PostCSS. */
   postcss: {
-    plugins: (string | { name: string; options: Record<string, any> })[];
+    plugins: (string | {
+      name: string;
+      // deno-lint-ignore no-explicit-any
+      options: Record<string, any>;
+    })[];
   };
+
   /** `baseUrl` specifies the path prefix for the application (default is '/'). */
   baseUrl: string;
   /** `defaultLocale` specifies the default locale of the application (default is '**en**'). */
@@ -38,15 +45,59 @@ export class Configuration {
 
   isBuilding: boolean;
 
-  readonly appRoot: string;
-  readonly srcDir: string;
+  /**
+   * The path React was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactWritePath?: string;
+
+  /**
+   * The path ReactDOM was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactDOMWritePath?: string;
+
+  /**
+   * The path ReactDOMServer was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactServerWritePath?: string;
+
+  /**
+   * The path React-Refresh runtime was written to.
+   * ModuleHandler sets this during compilation.
+   */
+  reactHmrWritePath?: string;
+
+  /** The root dir of the users application */
+  readonly rootDir: string;
+
+  /** The app folder of the users application */
+  readonly appDir: string;
+
+  /** The server folder of the users application */
+  readonly serverDir: string;
+
   readonly mode: "test" | "development" | "production";
 
-  /** `reactUrl` specifies the **react** download URL (default is 'https://esm.sh/react@16.14.0'). */
+  /** `reactUrl` specifies the **react** download URL
+   * (default is 'https://esm.sh/react@17.0.1').
+   */
   readonly reactUrl: string;
-  /** `reactDomUrl` specifies the **react-dom** download URL (default is 'https://esm.sh/react-dom@16.14.0'). */
+
+  /** `reactDomUrl` specifies the **react-dom** download URL
+   * (default is 'https://esm.sh/react-dom@17.0.1').
+   */
   readonly reactDomUrl: string;
+
+  /** `reacHmrtUrl` specifies the **react HMR runtime** download URL
+   * (default is 'https://esm.sh/react-refresh@0.8.3/runtime').
+   */
+  readonly reactHmrUrl: string;
+
   readonly importMap: Readonly<{ imports: Record<string, string> }>;
+
+  readonly reload: boolean;
 
   // private readonly CONFIG_FILES: Array<string>;
 
@@ -54,10 +105,13 @@ export class Configuration {
     appDir: string,
     mode: "test" | "development" | "production",
     building: boolean = false,
+    reload: boolean = false,
   ) {
-    this.appRoot = path.resolve(appDir);
-    this.srcDir = path.join(this.appRoot, "src");
+    this.rootDir = path.resolve(appDir);
+    this.appDir = path.join(this.rootDir, "app");
+    this.serverDir = path.join(this.rootDir, "server");
     this.mode = mode;
+    this.reload = reload;
     this.outputDir = "/dist";
     this.baseUrl = "/";
     this.mainJSPath = "/main.js";
@@ -69,6 +123,7 @@ export class Configuration {
     this.isBuilding = building;
     this.reactUrl = "https://esm.sh/react@17.0.1";
     this.reactDomUrl = "https://esm.sh/react-dom@17.0.1";
+    this.reactHmrUrl = "https://esm.sh/react-refresh@0.8.3/runtime";
     this.plugins = [];
     this.postcss = {
       plugins: [
@@ -99,15 +154,15 @@ export class Configuration {
   get mainJS(): string {
     // TODO: Just move bootstrap code here
     return `
-      import { bootstrap } from "./bootstrap.ts";
+      import { bootstrap } from "./bootstrap.js";
       bootstrap()
       `;
   }
 
   get buildDir() {
     return path.join(
-      this.appRoot,
-      ".tails/src",
+      this.rootDir,
+      ".tails",
     );
   }
 
@@ -117,10 +172,10 @@ export class Configuration {
    */
   get assetDir(): string {
     if (this.isDev || this.isBuilding) {
-      return path.join(this.appRoot, "src");
+      return path.join(this.rootDir, "src");
     }
 
-    return path.join(this.appRoot, ".tails", "src");
+    return path.join(this.rootDir, ".tails");
   }
 
   /**
@@ -135,6 +190,7 @@ export class Configuration {
   }
 
   async loadConfig() {
+    // deno-lint-ignore no-explicit-any
     const config: Record<string, any> = {};
     await this.loadImportMap();
     await this.loadConfigFiles(config);
@@ -142,7 +198,7 @@ export class Configuration {
   }
 
   private async loadImportMap() {
-    const importMapFile = path.join(this.appRoot, "import_map.json");
+    const importMapFile = path.join(this.rootDir, "import_map.json");
     if (existsFileSync(importMapFile)) {
       const { imports } = JSON.parse(await Deno.readTextFile(importMapFile));
       Object.assign(
@@ -151,6 +207,8 @@ export class Configuration {
       );
     }
 
+    // TODO:
+    // deno-lint-ignore no-explicit-any
     const { ALEPH_IMPORT_MAP } = globalThis as any;
     if (ALEPH_IMPORT_MAP) {
       const { imports } = ALEPH_IMPORT_MAP;
@@ -161,9 +219,10 @@ export class Configuration {
     }
   }
 
+  // deno-lint-ignore no-explicit-any
   private async loadConfigFiles(config: Record<string, any>) {
     // for (const name of this.CONFIG_FILES) {
-    //   const configPath = path.join(this.appRoot, name);
+    //   const configPath = path.join(this.rootDir, name);
     //   if (existsFileSync(configPath)) {
     //     const { default: conf } = await import("file://" + configPath);
 
@@ -174,7 +233,7 @@ export class Configuration {
     //     break;
     //   }
     // }
-    const configPath = path.join(this.appRoot, "config/config.development.ts");
+    const configPath = path.join(this.rootDir, "config/config.development.ts");
     if (existsFileSync(configPath)) {
       const { default: conf } = await import("file://" + configPath);
 
@@ -187,7 +246,9 @@ export class Configuration {
     }
   }
 
+  // deno-lint-ignore no-explicit-any
   private async setUserConfiguration(config: Record<string, any>) {
+    // deno-lint-ignore no-explicit-any
     const { navigator } = globalThis as any;
     const {
       ouputDir,
@@ -269,9 +330,9 @@ export class Configuration {
 
     if (util.isPlainObject(postcss) && util.isArray(postcss.plugins)) {
       Object.assign(this, { postcss });
-    } else if (existsFileSync(path.join(this.appRoot, "postcss.config.json"))) {
+    } else if (existsFileSync(path.join(this.rootDir, "postcss.config.json"))) {
       const text = await Deno.readTextFile(
-        path.join(this.appRoot, "postcss.config.json"),
+        path.join(this.rootDir, "postcss.config.json"),
       );
       try {
         const postcss = JSON.parse(text);

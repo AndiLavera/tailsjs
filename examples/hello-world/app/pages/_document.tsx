@@ -9,10 +9,6 @@ export default function Document(
   return (
     <html lang="en">
       <head>
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/purecss@2.0.3/build/pure-min.css"
-        />
         <link rel="modulepreload" href="/_hmr.ts"></link>
         <link rel="modulepreload" href="/main.js"></link>
         <link rel="modulepreload" href="/bootstrap.ts"></link>

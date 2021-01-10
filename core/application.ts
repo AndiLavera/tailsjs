@@ -12,7 +12,6 @@ export class Application {
   readonly moduleHandler: ModuleHandler;
   private readonly routeHandler: RouteHandler;
   private readonly mode: "test" | "development" | "production";
-  private readonly reload: boolean;
 
   constructor(
     appDir: string,
@@ -22,8 +21,7 @@ export class Application {
   ) {
     this.appRoot = path.resolve(appDir);
     this.mode = mode;
-    this.reload = reload;
-    this.config = new Configuration(appDir, mode, building);
+    this.config = new Configuration(appDir, mode, building, reload);
     this.moduleHandler = new ModuleHandler(this.config);
     this.routeHandler = new RouteHandler(
       this.config,
@@ -52,7 +50,7 @@ export class Application {
     const startTime = performance.now();
 
     await this.config.loadConfig();
-    await this.init(this.reload);
+    await this.init(this.config.reload);
 
     await this.routeHandler.init();
     const staticRoutes = this.routeHandler._staticRoutes;
@@ -82,7 +80,7 @@ export class Application {
     const startTime = performance.now();
 
     await this.config.loadConfig();
-    await this.init(this.reload);
+    await this.init(this.config.reload);
 
     await this.routeHandler.init();
     const staticRoutes = this.routeHandler._staticRoutes;
@@ -114,22 +112,18 @@ export class Application {
   }
 
   private async init(reload: boolean): Promise<void> {
-    const pagesDir = path.join(this.appRoot, "src/pages");
+    const pagesDir = path.join(this.appRoot, "app/pages");
 
     if (!(existsDirSync(pagesDir))) {
       log.fatal(`'pages' directory not found.`);
     }
 
     if (reload) {
-      if (existsDirSync(this.buildDir)) {
-        await Deno.remove(this.buildDir, { recursive: true });
+      if (existsDirSync(this.config.buildDir)) {
+        await Deno.remove(this.config.buildDir, { recursive: true });
       }
 
-      await ensureDir(this.buildDir);
-    }
-
-    if (this.config.isDev) {
-      // this._watch();
+      await ensureDir(this.config.buildDir);
     }
   }
 }

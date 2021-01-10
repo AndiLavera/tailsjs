@@ -1,12 +1,18 @@
-import { ComponentType, React, renderToString } from "../deps.ts";
+import { ComponentType } from "../deps.ts";
 
-export function generateHTML(
-  App: ComponentType<any>,
-  Document: ComponentType<any>,
-  Component: ComponentType<any>,
-  props: Record<string, any> = {},
-): string {
-  return renderToString(
+export async function generateHTML(renderData: {
+  App: ComponentType<any>;
+  Document: any;
+  Component: any;
+  props: Record<string, any>;
+  reactWritePath: string;
+  reactServerWritePath: string;
+}): Promise<string> {
+  const React = (await import(renderData.reactWritePath)).default;
+  const ReactDOMServer = await import(renderData.reactServerWritePath);
+  const { App, Document, Component, props } = renderData;
+
+  return (ReactDOMServer as any).renderToString(
     <Document initialData={props}>
       <App Page={Component} pageProps={props} />
     </Document>,

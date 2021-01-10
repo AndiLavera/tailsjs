@@ -1,21 +1,21 @@
 import { ComponentType } from "../deps.ts";
 import { dynamicImport } from "../utils/dynamicImport.ts";
 import * as compiler from "../compiler/compiler.ts";
-import * as plugins from "../compiler/plugins.ts";
 import { ensureTextFile } from "../fs.ts";
 import { path } from "../std.ts";
 import utils from "./utils.ts";
 import { generateHTML } from "../utils/generateHTML.tsx";
+import { Configuration } from "../core/configuration.ts";
 
 interface Options {
   fullpath: string;
-  appRoot: string;
+  isStatic: boolean;
+  isPlugin: boolean;
+  config: Configuration;
   html?: string;
   source?: string;
   map?: string;
   content?: string;
-  isStatic?: boolean;
-  isPlugin?: boolean;
   writePath?: string;
 }
 
@@ -25,9 +25,6 @@ export default class Module {
 
   /** The path of the module after `/src` */
   srcPath: string;
-
-  /** The path the module will get written to. */
-  appRoot: string;
 
   /** `true` if this module is a static route */
   isStatic: boolean;
@@ -55,6 +52,8 @@ export default class Module {
   // deno-lint-ignore no-explicit-any
   private importedModule?: any;
 
+  private readonly config: Configuration;
+
   constructor(
     {
       fullpath,
@@ -64,8 +63,8 @@ export default class Module {
       content,
       isStatic,
       isPlugin,
-      appRoot,
       writePath,
+      config,
     }: Options,
   ) {
     this.fullPath = fullpath;
@@ -73,15 +72,40 @@ export default class Module {
     this.source = source;
     this.map = map;
     this.content = content;
-    this.appRoot = appRoot;
     this.writePath = writePath;
+    this.config = config;
     this.isPlugin = isPlugin || false;
     this.isStatic = isStatic || false;
-    this.srcPath = utils.cleanKey(fullpath, this.appRoot);
+    this.srcPath = utils.cleanKey(fullpath, config.rootDir);
   }
 
   get isPage() {
     return this.srcPath.includes("/pages");
+  }
+
+  get isAppMod() {
+    return this.srcPath.includes("/app/");
+  }
+
+  get appPath() {
+    return path.join(this.config.rootDir, "/app");
+  }
+
+  get isServerMod() {
+    return this.srcPath.includes("/server/");
+  }
+
+  get serverPath() {
+    return path.join(this.config.rootDir, "/server");
+  }
+
+  get htmlPath() {
+    const dir = path.dirname(this.writePath as string);
+    const filename = (this.writePath as string).replace(dir, "");
+
+    return path
+      .join(this.config.buildDir, filename)
+      .replace(".js", ".html");
   }
 
   async module() {
@@ -100,7 +124,7 @@ export default class Module {
     return this.importedModule;
   }
 
-  render(
+  async render(
     // deno-lint-ignore no-explicit-any
     App: ComponentType<any>,
     // deno-lint-ignore no-explicit-any
@@ -114,21 +138,23 @@ export default class Module {
       throw new Error("Must import module before rendering");
     }
 
-    const html = generateHTML(
-      App,
-      Document,
-      this.importedModule.default,
+    const html = await generateHTML({
+      App: App,
+      Document: Document,
+      Component: this.importedModule.default,
       props,
-    );
+      reactWritePath: this.config.reactWritePath as string,
+      reactServerWritePath: this.config.reactServerWritePath as string,
+    });
 
-    if (this.isStatic) {
+    if (this.isStatic && this.config.mode !== "development") {
       this.html = html;
     }
 
     return html;
   }
 
-  fetchHTML(
+  async fetchHTML(
     // deno-lint-ignore no-explicit-any
     App: ComponentType<any>,
     // deno-lint-ignore no-explicit-any
@@ -136,7 +162,7 @@ export default class Module {
     // deno-lint-ignore no-explicit-any
     props: Record<string, any> = {},
   ) {
-    return this.html || this.render(
+    return this.html || await this.render(
       App,
       Document,
       props,
@@ -150,15 +176,26 @@ export default class Module {
     let result;
 
     if (this.isPlugin) {
-      result = await plugins.transform(module);
+      result = await compiler.transform(module);
     } else {
-      const transformedModule = await plugins.transform(module);
+      const transformedModule = await compiler.transform(module, {
+        buildDir: this.config.buildDir,
+        rootDir: this.config.rootDir,
+        reactLocalPath: this.config.reactWritePath,
+        reactDOMLocalPath: this.config.reactServerWritePath,
+        isBuilding: this.config.isBuilding,
+        reload: this.config.reload,
+      });
       result = await compiler.transpile(transformedModule);
     }
 
     for (const key of Object.keys(result)) {
-      const cleanedKey = utils.cleanKey(key, this.appRoot);
-      this.writePath = path.join(this.appRoot, ".tails", cleanedKey);
+      const cleanedKey = utils.cleanKey(key, this.config.rootDir);
+
+      this.writePath = path.join(
+        this.config.buildDir,
+        cleanedKey,
+      );
       const module = result[key];
 
       if (typeof module === "string") {
@@ -173,13 +210,14 @@ export default class Module {
 
     return utils.removeDir(
       this.writePath as string,
-      path.join(this.appRoot, ".tails/src"),
+      this.config.buildDir,
     );
   }
 
   async retranspile() {
     await this.loadFile();
     await this.transpile();
+    await this.write();
   }
 
   async write() {
@@ -187,8 +225,14 @@ export default class Module {
       await ensureTextFile(this.writePath, this.source as string);
       if (this.html) {
         await ensureTextFile(
-          this.writePath.replace(".js", ".html"),
+          this.htmlPath,
           this.html,
+        );
+      }
+      if (this.map && !this.isServerMod) {
+        await ensureTextFile(
+          this.writePath + ".map",
+          this.map,
         );
       }
     } else {

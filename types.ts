@@ -84,6 +84,15 @@ export interface SSROptions {
   staticPaths?: string[];
 }
 
+export interface CompilerOptions {
+  buildDir?: string;
+  rootDir?: string;
+  reactLocalPath?: string;
+  reactDOMLocalPath?: string;
+  isBuilding?: boolean;
+  reload?: boolean;
+}
+
 /**
  * A compiler plugin for **Tails.js** application. The transform
  * methods are invoked just before transpile & just after transpiling.
@@ -108,12 +117,13 @@ export interface CompilerPlugin {
    * before transpiling to ensure unsupported imports,
    * such as css imports, are not transpiled.
    */
-  resolve?(url: string): string;
+  resolve?(url: string, opts: CompilerOptions): Promise<string> | string;
   /**
    * Handles transforming the source content before transpiling.
    */
   transform?(
     { pathname, content }: { pathname: string; content: string },
+    opts: CompilerOptions,
   ): Promise<string>;
 }
 
@@ -128,7 +138,14 @@ export interface ManifestModule {
 }
 
 export interface Manifest {
-  [key: string]: ManifestModule;
+  modules: {
+    [key: string]: ManifestModule;
+  };
+  reactLocalPaths: {
+    reactPath: string;
+    reactDomPath: string;
+    reactDomServerPath: string;
+  };
 }
 
 /**

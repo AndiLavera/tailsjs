@@ -10,8 +10,6 @@ import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
 import Module from "../modules/module.ts";
 import { version } from "../version.ts";
-import { setStaticMiddleware } from "./utils.ts";
-import { APIRoute } from "../types.ts";
 
 export default class AssetRouter {
   readonly router: OakRouter;
@@ -34,19 +32,49 @@ export default class AssetRouter {
     }
 
     await this.setDefaultRoutes();
-    await this.setPublicRoutes();
-    this.setModuleRoutes();
+    await this.setAssetRoutes();
   }
 
   private async setDefaultRoutes() {
     let bootstrap = await this.fetchTailsAsset("/browser/bootstrap.js");
-    if (this.config.mode === "production") {
-      bootstrap = bootstrap.replace('import "./_hmr.ts";\n', "")
-        .replace("?dev", "")
-        .replace("?dev", "");
+    const reactPath = this.config.reactWritePath?.replace(
+      this.config.buildDir,
+      "",
+    );
+    const reactDOMPath = this.config.reactDOMWritePath?.replace(
+      this.config.buildDir,
+      "",
+    );
+    if (this.config.mode === "development") {
+      bootstrap = `
+      import "./_hmr.ts";
+      import React from "${reactPath}";
+      import { hydrate } from "${reactDOMPath}";
+      ` + bootstrap;
+    } else {
+      bootstrap = `
+      import React from "${reactPath}";
+      import { hydrate } from "${reactDOMPath}";
+      ` + bootstrap;
+
+      // TODO: To remove after updating versions
+      bootstrap = bootstrap.replace(
+        `import "./_hmr.ts";`,
+        "",
+      );
     }
 
-    this.router.get("/bootstrap.ts", (context: Context) => {
+    // TODO: To remove after updating versions
+    bootstrap = bootstrap.replace(
+      `import React from "https://esm.sh/react@17.0.1?dev";`,
+      "",
+    );
+    bootstrap = bootstrap.replace(
+      `import { hydrate } from "https://esm.sh/react-dom@17.0.1?dev";`,
+      "",
+    );
+
+    this.router.get("/bootstrap.js", (context: Context) => {
       context.response.type = "application/javascript";
       context.response.body = bootstrap;
     });
@@ -57,73 +85,35 @@ export default class AssetRouter {
     });
   }
 
-  /**
-   * Handles walking the users `/public` dir
-   * and adding each asset to the router.
-   */
-  private async setPublicRoutes() {
-    const publicDir = path.join(this.config.appRoot, "public");
+  private async setAssetRoutes() {
+    const buildDir = this.config.buildDir;
 
-    for await (const { path: staticFilePath } of walk(publicDir)) {
-      if (publicDir === staticFilePath) continue;
-
-      const file = await this.fetchStaticAsset(staticFilePath);
-      const route = staticFilePath.replace(publicDir, "");
-
-      this.router.get(route, (context: Context) => {
-        context.response.type = getContentType(route);
-        context.response.body = file;
-      });
-    }
-  }
-
-  private setModuleRoutes() {
     log.debug("JS Asset Routes:");
-    for (const key of this.moduleHandler.keys()) {
-      if (key.includes("/controllers/") || key.includes("/middleware/")) {
-        continue;
-      }
+    for await (const { path: assetFilePath } of walk(buildDir)) {
+      if (assetFilePath.includes("/server/")) continue;
 
-      const route = key.replace("/pages", "");
-      log.debug(`  ${route}`);
+      if ((await Deno.lstat(assetFilePath)).isDirectory) continue;
 
-      const module = this.moduleHandler.get(key) as Module;
-      if (module.map) {
-        log.debug(`  ${route}.map`);
-        this.router.get(`${route}.map`, (context: Context) => {
-          console.log("hit map");
-          try {
-            context.response.type = getContentType(route);
-            context.response.body = (this.moduleHandler.get(key) as Module).map;
-          } catch (error) {
-            log.error(error);
-          }
-        });
-      }
+      const route = assetFilePath
+        .replace(buildDir, "")
+        .replace("/app", "")
+        .replace("/pages", "")
+        .replace("/public", "");
 
-      this.router.get(route, (context: Context) => {
-        try {
-          const module = this.moduleHandler.get(key) as Module;
-          let source = module.source as string;
+      log.debug(route);
 
-          if (this.config.mode === "development") {
-            source = injectHMR(key, source);
-          }
+      this.router.get(route, async (context: Context) => {
+        context.response.type = getContentType(route);
 
-          if (module.map) {
-            const sourceMapUrl = (route: string) => route.slice(1);
-
-            context.response.headers.set("SourceMap", sourceMapUrl(route));
-            context.response.headers.set("X-SourceMap", sourceMapUrl(route));
-            source = source +
-              `\n// # sourceMappingURL=${sourceMapUrl(route)}.map`;
-          }
-
-          context.response.type = getContentType(route);
-          context.response.body = source;
-        } catch (error) {
-          log.error(error);
+        const file = await this.fetchStaticAsset(assetFilePath);
+        if (this.config.mode === "production") {
+          context.response.body = file;
+          return;
         }
+
+        context.response.body = assetFilePath.includes("/app/")
+          ? injectHMR(assetFilePath.replace(buildDir, ""), file)
+          : file;
       });
     }
   }
@@ -149,7 +139,9 @@ export default class AssetRouter {
                   JSON.stringify({
                     type: "update",
                     moduleId: data.id,
-                    updateUrl: data.id.replace("/pages", ""),
+                    updateUrl: data.id
+                      .replace("/app", "")
+                      .replace("/pages", ""),
                   }),
                 );
               };
@@ -165,15 +157,26 @@ export default class AssetRouter {
   private async setHMRAssetRoutes() {
     const hmrData = await this.fetchTailsAsset("/hmr/hmr.ts");
     const eventData = await this.fetchTailsAsset("/hmr/events.ts");
-
     const hmrContent = await Deno.transpileOnly({
       "hmr.ts": hmrData,
       "events.ts": eventData,
     });
 
+    const reactHmrPath = this.config.reactHmrWritePath?.replace(
+      this.config.buildDir,
+      "",
+    );
+
+    let hmrSource = hmrContent["hmr.ts"].source;
+
+    hmrSource = hmrSource.replace(
+      'import runtime from "https://esm.sh/react-refresh@0.8.3/runtime?dev";',
+      `import runtime from "${reactHmrPath}";`,
+    );
+
     this.router.get("/_hmr.ts", (context: Context) => {
       context.response.type = "application/javascript";
-      context.response.body = hmrContent["hmr.ts"].source;
+      context.response.body = hmrSource;
     });
 
     this.router.get("/events.ts", (context: Context) => {
