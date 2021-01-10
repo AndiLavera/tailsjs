@@ -1,21 +1,32 @@
 import {
   doubleQuotesRegex,
+  reactUrlRegex,
   reExportPath,
   reHttp,
   reImportPath,
   reModuleExt,
-  urlRegex,
 } from "../core/utils.ts";
-import { ensureTextFile } from "../fs.ts";
+import { ensureTextFile, existsFile } from "../fs.ts";
 import { path } from "../std.ts";
 import { CompilerOptions } from "../types.ts";
 import { getRelativePath } from "./getRelativePath.ts";
+import log from "../logger/logger.ts";
 
 /** TODO: Document */
 export async function recurseImports(
   { pathname, content }: { pathname: string; content: string },
   opts: CompilerOptions,
 ) {
+  const { reactLocalPath, buildDir, reload, isBuilding } = opts;
+  if (
+    reactLocalPath === undefined ||
+    buildDir === undefined ||
+    reload === undefined ||
+    isBuilding === undefined
+  ) {
+    return content;
+  }
+
   let transformedContent = content;
   let matchedImports = content.match(reImportPath);
   matchedImports ||= content.match(reExportPath);
@@ -33,8 +44,8 @@ export async function recurseImports(
     const url = matchedURL[0];
 
     let to;
-    if (urlRegex.test(url) && opts.reactLocalPath) {
-      to = opts.reactLocalPath;
+    if (reactUrlRegex.test(url) && reactLocalPath) {
+      to = reactLocalPath;
     } else {
       to = await fetchRemote(url, opts);
     }
@@ -63,7 +74,7 @@ export async function recurseImports(
 }
 
 export async function fetchRemote(url: string, opts: CompilerOptions) {
-  const { buildDir } = opts;
+  const { buildDir, isBuilding, reload } = opts;
   const cleanURL = url;
 
   let writePath = path.join(
@@ -74,6 +85,12 @@ export async function fetchRemote(url: string, opts: CompilerOptions) {
   if (!writePath.match(reModuleExt)) {
     writePath = writePath + ".js";
   }
+
+  if (!isBuilding && !reload && await existsFile(writePath)) {
+    return writePath;
+  }
+
+  log.debug(`Downloading ${cleanURL}`);
 
   const asset = await fetch(cleanURL);
   if (asset.status === 200) {

@@ -89,6 +89,8 @@ export interface CompilerOptions {
   appRoot?: string;
   reactLocalPath?: string;
   reactDOMLocalPath?: string;
+  isBuilding?: boolean;
+  reload?: boolean;
 }
 
 /**

@@ -1,4 +1,9 @@
 import React, { useState } from "https://esm.sh/react@17.0.1";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "https://esm.sh/react-query@3.5.11";
 
 const About = ({ version }: { version: string }) => {
   const [count, setCount] = useState(0);

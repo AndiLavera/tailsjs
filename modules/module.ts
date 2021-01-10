@@ -183,6 +183,8 @@ export default class Module {
         appRoot: this.config.appRoot,
         reactLocalPath: this.config.reactWritePath,
         reactDOMLocalPath: this.config.reactServerWritePath,
+        isBuilding: this.config.isBuilding,
+        reload: this.config.reload,
       });
       result = await compiler.transpile(transformedModule);
     }

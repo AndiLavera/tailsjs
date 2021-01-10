@@ -126,6 +126,8 @@ export async function compileRemoteAsset(
     reactLocalPath: config.reactUrl,
     reactDomLocalPath: config.reactDomUrl,
     buildDir: config.buildDir,
+    isBuilding: config.isBuilding,
+    reload: config.reload,
   };
 
   let remoteURL = url;
@@ -143,7 +145,7 @@ export async function compileRemoteAsset(
     return writePath;
   }
 
-  log.debug(`Downloading ${url}`);
+  log.debug(`Downloading ${remoteURL}`);
   const asset = await fetch(remoteURL);
 
   if (asset.status === 200) {
