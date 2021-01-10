@@ -51,17 +51,28 @@ export default class AssetRouter {
       import React from "${reactPath}";
       import { hydrate } from "${reactDOMPath}";
       ` + bootstrap;
+    } else {
+      bootstrap = `
+      import React from "${reactPath}";
+      import { hydrate } from "${reactDOMPath}";
+      ` + bootstrap;
 
       // TODO: To remove after updating versions
       bootstrap = bootstrap.replace(
-        `import React from "https://esm.sh/react@17.0.1?dev";`,
-        "",
-      );
-      bootstrap = bootstrap.replace(
-        `import { hydrate } from "https://esm.sh/react-dom@17.0.1?dev";`,
+        `import "./_hmr.ts";`,
         "",
       );
     }
+
+    // TODO: To remove after updating versions
+    bootstrap = bootstrap.replace(
+      `import React from "https://esm.sh/react@17.0.1?dev";`,
+      "",
+    );
+    bootstrap = bootstrap.replace(
+      `import { hydrate } from "https://esm.sh/react-dom@17.0.1?dev";`,
+      "",
+    );
 
     this.router.get("/bootstrap.js", (context: Context) => {
       context.response.type = "application/javascript";

@@ -138,7 +138,14 @@ export interface ManifestModule {
 }
 
 export interface Manifest {
-  [key: string]: ManifestModule;
+  modules: {
+    [key: string]: ManifestModule;
+  };
+  reactLocalPaths: {
+    reactPath: string;
+    reactDomPath: string;
+    reactDomServerPath: string;
+  };
 }
 
 /**

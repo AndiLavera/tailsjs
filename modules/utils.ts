@@ -8,4 +8,15 @@ export default {
     return key
       .replace(`${dir}`, "");
   },
+
+  async loadManifest(path: string) {
+    const decoder = new TextDecoder("utf-8");
+
+    try {
+      const data = await Deno.readFile(path);
+      return JSON.parse(decoder.decode(data));
+    } catch {
+      throw new Error(`Cannot load manifest. Path tried: ${path}`);
+    }
+  },
 };
