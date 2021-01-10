@@ -76,7 +76,7 @@ export default class Module {
     this.config = config;
     this.isPlugin = isPlugin || false;
     this.isStatic = isStatic || false;
-    this.srcPath = utils.cleanKey(fullpath, config.appRoot);
+    this.srcPath = utils.cleanKey(fullpath, config.rootDir);
   }
 
   get isPage() {
@@ -88,7 +88,7 @@ export default class Module {
   }
 
   get appPath() {
-    return path.join(this.config.appRoot, "/app");
+    return path.join(this.config.rootDir, "/app");
   }
 
   get isServerMod() {
@@ -96,7 +96,7 @@ export default class Module {
   }
 
   get serverPath() {
-    return path.join(this.config.appRoot, "/server");
+    return path.join(this.config.rootDir, "/server");
   }
 
   get htmlPath() {
@@ -147,7 +147,7 @@ export default class Module {
       reactServerWritePath: this.config.reactServerWritePath as string,
     });
 
-    if (this.isStatic) {
+    if (this.isStatic && this.config.mode !== "development") {
       this.html = html;
     }
 
@@ -180,7 +180,7 @@ export default class Module {
     } else {
       const transformedModule = await compiler.transform(module, {
         buildDir: this.config.buildDir,
-        appRoot: this.config.appRoot,
+        rootDir: this.config.rootDir,
         reactLocalPath: this.config.reactWritePath,
         reactDOMLocalPath: this.config.reactServerWritePath,
         isBuilding: this.config.isBuilding,
@@ -190,7 +190,7 @@ export default class Module {
     }
 
     for (const key of Object.keys(result)) {
-      const cleanedKey = utils.cleanKey(key, this.config.appRoot);
+      const cleanedKey = utils.cleanKey(key, this.config.rootDir);
 
       this.writePath = path.join(
         this.config.buildDir,

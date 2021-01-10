@@ -124,15 +124,22 @@ export default class AssetRouter {
               const callback = async () => {
                 if (socket.isClosed) return;
 
+                console.log(
+                  "updateUrl",
+                  data.id.replace("/app", "").replace("/pages", ""),
+                );
+
                 await socket.send(
                   JSON.stringify({
                     type: "update",
                     moduleId: data.id,
-                    updateUrl: data.id.replace("/app/pages", ""),
+                    updateUrl: data.id
+                      .replace("/app/pages", ""),
                   }),
                 );
               };
 
+              console.log(`watching: ${data.id}`);
               watcher.on("modify-" + data.id, callback);
             }
           }

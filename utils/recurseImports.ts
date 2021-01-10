@@ -17,7 +17,7 @@ export async function recurseImports(
   { pathname, content }: { pathname: string; content: string },
   opts: CompilerOptions,
 ) {
-  const { reactLocalPath, buildDir, reload, isBuilding } = opts;
+  const { reactLocalPath, buildDir, reload, isBuilding, rootDir } = opts;
   if (
     reactLocalPath === undefined ||
     buildDir === undefined ||
@@ -51,11 +51,11 @@ export async function recurseImports(
     }
 
     const pathToAdd = !pathname.includes(".tails")
-      ? opts.buildDir as string
-      : path.join(opts.appRoot as string);
+      ? buildDir as string
+      : path.join(rootDir as string);
 
     const from = pathname.replace(
-      opts.appRoot as string,
+      rootDir as string,
       pathToAdd,
     );
 

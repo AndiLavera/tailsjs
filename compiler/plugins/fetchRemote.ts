@@ -9,8 +9,8 @@ const defaultPlugin: CompilerPlugin = {
   test: /\.(jsx|mjs|tsx|ts|js?)/g,
   acceptHMR: true,
   transform: async ({ pathname, content }, opts: CompilerOptions) => {
-    const { appRoot, buildDir, reactLocalPath, reactDOMLocalPath } = opts;
-    if (!buildDir && !appRoot && !reactLocalPath && !reactDOMLocalPath) {
+    const { rootDir, buildDir, reactLocalPath, reactDOMLocalPath } = opts;
+    if (!buildDir && !rootDir && !reactLocalPath && !reactDOMLocalPath) {
       return content;
     }
 

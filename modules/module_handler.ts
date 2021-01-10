@@ -33,7 +33,7 @@ export class ModuleHandler {
   }
 
   get appRoot(): string {
-    return this.config.appRoot;
+    return this.config.rootDir;
   }
 
   async init(
@@ -370,7 +370,9 @@ export class ModuleHandler {
         const transformedPath = await this.recompile(path);
         await routeHandler.reloadModule(path);
 
-        const cleanPath = utils.cleanKey(transformedPath, this.config.appRoot);
+        const cleanPath = transformedPath
+          .replace(/\.(jsx|mjs|tsx|ts?)/g, ".js");
+        console.log(cleanPath);
 
         this.eventListeners.forEach((eventListener) => {
           eventListener.emit(
@@ -391,7 +393,7 @@ export class ModuleHandler {
   }
 
   private async recompile(filePath: string) {
-    const key = utils.cleanKey(filePath, this.config.appRoot);
+    const key = utils.cleanKey(filePath, this.config.rootDir);
 
     let module = this.modules.get(key);
     let transformedPath;

@@ -70,7 +70,7 @@ export class Configuration {
   reactHmrWritePath?: string;
 
   /** The root dir of the users application */
-  readonly appRoot: string;
+  readonly rootDir: string;
 
   /** The app folder of the users application */
   readonly appDir: string;
@@ -107,9 +107,9 @@ export class Configuration {
     building: boolean = false,
     reload: boolean = false,
   ) {
-    this.appRoot = path.resolve(appDir);
-    this.appDir = path.join(this.appRoot, "app");
-    this.serverDir = path.join(this.appRoot, "server");
+    this.rootDir = path.resolve(appDir);
+    this.appDir = path.join(this.rootDir, "app");
+    this.serverDir = path.join(this.rootDir, "server");
     this.mode = mode;
     this.reload = reload;
     this.outputDir = "/dist";
@@ -161,7 +161,7 @@ export class Configuration {
 
   get buildDir() {
     return path.join(
-      this.appRoot,
+      this.rootDir,
       ".tails",
     );
   }
@@ -172,10 +172,10 @@ export class Configuration {
    */
   get assetDir(): string {
     if (this.isDev || this.isBuilding) {
-      return path.join(this.appRoot, "src");
+      return path.join(this.rootDir, "src");
     }
 
-    return path.join(this.appRoot, ".tails", "src");
+    return path.join(this.rootDir, ".tails");
   }
 
   /**
@@ -198,7 +198,7 @@ export class Configuration {
   }
 
   private async loadImportMap() {
-    const importMapFile = path.join(this.appRoot, "import_map.json");
+    const importMapFile = path.join(this.rootDir, "import_map.json");
     if (existsFileSync(importMapFile)) {
       const { imports } = JSON.parse(await Deno.readTextFile(importMapFile));
       Object.assign(
@@ -222,7 +222,7 @@ export class Configuration {
   // deno-lint-ignore no-explicit-any
   private async loadConfigFiles(config: Record<string, any>) {
     // for (const name of this.CONFIG_FILES) {
-    //   const configPath = path.join(this.appRoot, name);
+    //   const configPath = path.join(this.rootDir, name);
     //   if (existsFileSync(configPath)) {
     //     const { default: conf } = await import("file://" + configPath);
 
@@ -233,7 +233,7 @@ export class Configuration {
     //     break;
     //   }
     // }
-    const configPath = path.join(this.appRoot, "config/config.development.ts");
+    const configPath = path.join(this.rootDir, "config/config.development.ts");
     if (existsFileSync(configPath)) {
       const { default: conf } = await import("file://" + configPath);
 
@@ -330,9 +330,9 @@ export class Configuration {
 
     if (util.isPlainObject(postcss) && util.isArray(postcss.plugins)) {
       Object.assign(this, { postcss });
-    } else if (existsFileSync(path.join(this.appRoot, "postcss.config.json"))) {
+    } else if (existsFileSync(path.join(this.rootDir, "postcss.config.json"))) {
       const text = await Deno.readTextFile(
-        path.join(this.appRoot, "postcss.config.json"),
+        path.join(this.rootDir, "postcss.config.json"),
       );
       try {
         const postcss = JSON.parse(text);

@@ -86,7 +86,7 @@ export interface SSROptions {
 
 export interface CompilerOptions {
   buildDir?: string;
-  appRoot?: string;
+  rootDir?: string;
   reactLocalPath?: string;
   reactDOMLocalPath?: string;
   isBuilding?: boolean;

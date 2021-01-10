@@ -120,9 +120,9 @@ export async function compileRemoteAsset(
     callback?: (content: string, writePath: string) => Promise<void>;
   },
 ) {
-  const { appRoot, mode, buildDir } = config;
+  const { rootDir, mode, buildDir } = config;
   const opts = {
-    appRoot,
+    rootDir,
     reactLocalPath: config.reactUrl,
     reactDomLocalPath: config.reactDomUrl,
     buildDir: config.buildDir,
