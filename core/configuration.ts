@@ -11,12 +11,19 @@ import util, { reLocaleID } from "./utils.ts";
 export class Configuration {
   /** `env` appends env variables (use `Deno.env.get(key)` to get an env variable) */
   env: Record<string, string>;
+
   /** `buildTarget` specifies the build target for **tsc** (possible values: '**ES2015**' - '**ES2020**' | '**ESNext**', default is **ES2015** for `production` and **ES2018** for `development`). */
   buildTarget: string;
+
   /** A list of plugin of PostCSS. */
   postcss: {
-    plugins: (string | { name: string; options: Record<string, any> })[];
+    plugins: (string | {
+      name: string;
+      // deno-lint-ignore no-explicit-any
+      options: Record<string, any>;
+    })[];
   };
+
   /** `baseUrl` specifies the path prefix for the application (default is '/'). */
   baseUrl: string;
   /** `defaultLocale` specifies the default locale of the application (default is '**en**'). */
@@ -183,6 +190,7 @@ export class Configuration {
   }
 
   async loadConfig() {
+    // deno-lint-ignore no-explicit-any
     const config: Record<string, any> = {};
     await this.loadImportMap();
     await this.loadConfigFiles(config);
@@ -199,6 +207,8 @@ export class Configuration {
       );
     }
 
+    // TODO:
+    // deno-lint-ignore no-explicit-any
     const { ALEPH_IMPORT_MAP } = globalThis as any;
     if (ALEPH_IMPORT_MAP) {
       const { imports } = ALEPH_IMPORT_MAP;
@@ -209,6 +219,7 @@ export class Configuration {
     }
   }
 
+  // deno-lint-ignore no-explicit-any
   private async loadConfigFiles(config: Record<string, any>) {
     // for (const name of this.CONFIG_FILES) {
     //   const configPath = path.join(this.appRoot, name);
@@ -235,7 +246,9 @@ export class Configuration {
     }
   }
 
+  // deno-lint-ignore no-explicit-any
   private async setUserConfiguration(config: Record<string, any>) {
+    // deno-lint-ignore no-explicit-any
     const { navigator } = globalThis as any;
     const {
       ouputDir,
