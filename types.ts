@@ -44,15 +44,8 @@ export interface APIRoutes {
 }
 
 export interface WebModule {
-  page: {
-    // deno-lint-ignore no-explicit-any
-    imp: ComponentType<any>;
-    module: Module;
-  };
-  controller: {
-    imp: new () => Controller;
-    module: Module | undefined;
-  };
+  page: ComponentType<any>;
+  controller: new () => Controller;
 }
 
 export type APIModules = Record<string, new () => Controller>;

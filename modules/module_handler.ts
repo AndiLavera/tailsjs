@@ -202,27 +202,27 @@ export class ModuleHandler {
   // TODO: Rename renderStatic
   private async renderAll(routeHandler: RouteHandler) {
     // TODO: loadApiModule?
-    for await (const route of routeHandler.routes.web.routes) {
-      // TODO: continue if static
-      const webModule = await loadWebModule(
-        route,
-        this,
-        routeHandler.webModules,
-      );
+    // for await (const route of routeHandler.routes.web.routes) {
+    //   // TODO: continue if static
+    //   const webModule = await loadWebModule(
+    //     route,
+    //     this,
+    //     routeHandler.webModules,
+    //   );
 
-      let props;
-      if (webModule.controller.imp && route.method) {
-        props = new webModule.controller.imp()[route.method]();
-      }
+    //   let props;
+    //   if (webModule.controller.imp && route.method) {
+    //     props = new webModule.controller.imp()[route.method]();
+    //   }
 
-      await webModule.page.module.render(
-        // deno-lint-ignore no-explicit-any
-        this.appComponent as ComponentType<any>,
-        // deno-lint-ignore no-explicit-any
-        this.documentComponent as ComponentType<any>,
-        props,
-      );
-    }
+    //   await webModule.page.module.render(
+    //     // deno-lint-ignore no-explicit-any
+    //     this.appComponent as ComponentType<any>,
+    //     // deno-lint-ignore no-explicit-any
+    //     this.documentComponent as ComponentType<any>,
+    //     props,
+    //   );
+    // }
   }
 
   /**

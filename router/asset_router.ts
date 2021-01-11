@@ -8,7 +8,6 @@ import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
-import Module from "../modules/module.ts";
 import { version } from "../version.ts";
 
 export default class AssetRouter {

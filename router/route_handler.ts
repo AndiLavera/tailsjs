@@ -39,7 +39,7 @@ export class RouteHandler {
     this.moduleHandler = moduleHandler;
 
     this.assetRouter = new AssetRouter(config, moduleHandler);
-    this.apiRouter = new APIRouter(config, moduleHandler, this.apiModules);
+    this.apiRouter = new APIRouter(config, this.apiModules);
     this.webRouter = new WebRouter(config, moduleHandler, this.webModules);
 
     this.routes = {
@@ -136,7 +136,7 @@ export class RouteHandler {
 
   private async loadWebModules() {
     for await (const route of this.routes.web.routes) {
-      await loadWebModule(route, this.moduleHandler, this.webModules);
+      await loadWebModule(route, this.webModules, this.config.buildDir);
     }
   }
 
@@ -146,7 +146,7 @@ export class RouteHandler {
    */
   private async loadAPIModules() {
     for await (const route of this.routes.api.routes) {
-      await loadAPIModule(route, this.moduleHandler, this.apiModules);
+      await loadAPIModule(route, this.apiModules, this.config.buildDir);
     }
   }
 }
