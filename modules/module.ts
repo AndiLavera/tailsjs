@@ -104,7 +104,7 @@ export default class Module {
     const filename = (this.writePath as string).replace(dir, "");
 
     return path
-      .join(this.config.buildDir, filename)
+      .join(dir, filename)
       .replace(".js", ".html");
   }
 
@@ -113,14 +113,15 @@ export default class Module {
   }
 
   async import() {
+    const pathname = path.join(this.config.buildDir, this.writePath as string);
     if (this.importedModule) {
       this.importedModule = await dynamicImport(
-        "file://" + this.writePath as string,
+        "file://" + pathname,
       );
       return this.importedModule;
     }
 
-    this.importedModule = await import("file://" + this.writePath as string);
+    this.importedModule = await import("file://" + pathname);
     return this.importedModule;
   }
 
@@ -192,10 +193,7 @@ export default class Module {
     for (const key of Object.keys(result)) {
       const cleanedKey = utils.cleanKey(key, this.config.rootDir);
 
-      this.writePath = path.join(
-        this.config.buildDir,
-        cleanedKey,
-      );
+      this.writePath = path.join(cleanedKey);
       const module = result[key];
 
       if (typeof module === "string") {
@@ -222,16 +220,17 @@ export default class Module {
 
   async write() {
     if (this.writePath) {
-      await ensureTextFile(this.writePath, this.source as string);
+      const pathname = path.join(this.config.buildDir, this.writePath);
+      await ensureTextFile(pathname, this.source as string);
       if (this.html) {
         await ensureTextFile(
-          this.htmlPath,
+          path.join(this.config.buildDir, this.htmlPath),
           this.html,
         );
       }
       if (this.map && !this.isServerMod) {
         await ensureTextFile(
-          this.writePath + ".map",
+          pathname + ".map",
           this.map,
         );
       }
