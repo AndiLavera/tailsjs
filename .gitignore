@@ -1,3 +1,5 @@
 .tails/
 test.ts
 test.tsx
+tails.zip
+.deno_dir

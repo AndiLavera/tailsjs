@@ -1,15 +1,8 @@
-import type { APIGatewayProxyEvent, LambdaContext } from "./deps.ts";
+import type { APIGatewayProxyEventV2, LambdaContext } from "./deps.ts";
 import { Server } from "./deps.ts";
 import { handler as lamdaHandler } from "./core/serverless_oak.ts";
 import { Application } from "./core/application.ts";
-import { path, walk } from "./std.ts";
-
-console.log("CURRENT DIR:", Deno.cwd());
-for await (const entry of walk(".")) {
-  if (entry.path.includes(".git") || entry.path.includes(".deno_dir")) continue;
-
-  console.log(entry.path);
-}
+import { path } from "./std.ts";
 
 const application = new Application(
   path.join(Deno.cwd(), "examples/hello-world"),
@@ -26,7 +19,7 @@ application.routers.forEach((router) => {
 });
 
 export const handler = async (
-  event: APIGatewayProxyEvent,
+  event: APIGatewayProxyEventV2,
   context: LambdaContext,
 ) => {
   return await lamdaHandler(event, context, server);

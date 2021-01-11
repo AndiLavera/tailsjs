@@ -124,10 +124,13 @@ export class ModuleHandler {
     for await (const key of Object.keys(this.manifest.modules)) {
       const { modulePath, htmlPath } = this.manifest.modules[key];
 
-      const moduleData = await Deno.readFile(modulePath);
+      const pathname = path.join(this.config.buildDir, modulePath);
+      const moduleData = await Deno.readFile(pathname);
       let htmlData;
       if (htmlPath) {
-        htmlData = await Deno.readFile(htmlPath);
+        htmlData = await Deno.readFile(
+          path.join(this.config.buildDir, htmlPath),
+        );
       }
 
       // TODO: Manifest should include react url
@@ -146,10 +149,18 @@ export class ModuleHandler {
       this.set(key, module);
     }
 
-    this.config.reactWritePath = this.manifest.reactLocalPaths.reactPath;
-    this.config.reactDOMWritePath = this.manifest.reactLocalPaths.reactDomPath;
-    this.config.reactServerWritePath =
-      this.manifest.reactLocalPaths.reactDomServerPath;
+    this.config.reactWritePath = path.join(
+      this.config.buildDir,
+      this.manifest.reactLocalPaths.reactPath,
+    );
+    this.config.reactDOMWritePath = path.join(
+      this.config.buildDir,
+      this.manifest.reactLocalPaths.reactDomPath,
+    );
+    this.config.reactServerWritePath = path.join(
+      this.config.buildDir,
+      this.manifest.reactLocalPaths.reactDomServerPath,
+    );
   }
 
   private async writePublic() {
@@ -336,8 +347,18 @@ export class ModuleHandler {
     this.config.reactDOMWritePath = reactDOMWritePath;
     this.config.reactServerWritePath = reactServerWritePath;
     this.config.reactHmrWritePath = reactHmrWritePath;
-    this.manifest.reactLocalPaths.reactPath = reactWritePath;
-    this.manifest.reactLocalPaths.reactDomPath = reactDOMWritePath;
-    this.manifest.reactLocalPaths.reactDomServerPath = reactServerWritePath;
+    this.manifest.reactLocalPaths.reactPath = reactWritePath.replace(
+      this.config.buildDir,
+      "",
+    );
+    this.manifest.reactLocalPaths.reactDomPath = reactDOMWritePath.replace(
+      this.config.buildDir,
+      "",
+    );
+    this.manifest.reactLocalPaths.reactDomServerPath = reactServerWritePath
+      .replace(
+        this.config.buildDir,
+        "",
+      );
   }
 }
