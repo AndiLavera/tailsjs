@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEvent, LambdaContext } from "../deps.ts";
 import { Server } from "../deps.ts";
-import { handler } from "../deps.ts";
+import { handler } from "./serverless_oak.ts";
 import { Application } from "./application.ts";
 
 const application = new Application(Deno.cwd(), "production", false);
