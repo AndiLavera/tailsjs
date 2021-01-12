@@ -191,11 +191,7 @@ export default class Module {
     }
 
     for (const key of Object.keys(result)) {
-      const cleanedKey = utils.cleanKey(key, this.config.rootDir);
-      //   .replace("/app", "");
-      // this.writePath = cleanedKey.includes("server")
-      //   ? cleanedKey
-      //   : path.join(this.config.assetDirName, cleanedKey);
+      this.writePath = utils.cleanKey(key, this.config.rootDir);
 
       const module = result[key];
       if (typeof module === "string") {

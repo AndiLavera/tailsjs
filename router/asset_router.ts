@@ -25,7 +25,6 @@ export default class AssetRouter {
   }
 
   async setRoutes() {
-    // setStaticMiddleware(this.router);
     if (this.config.mode === "development") {
       this.handleHMR();
       await this.setHMRAssetRoutes();

@@ -242,17 +242,15 @@ export class ModuleHandler {
    */
   private async setDefaultComponents(): Promise<void> {
     this.appComponent = await this.loadComponent(
-      path.join(this.config.assetDirName, "/pages/_app.js"),
+      "/app/pages/_app.js",
     );
     this.documentComponent = await this.loadComponent(
-      path.join(this.config.assetDirName, "/pages/_document.js"),
+      "/app/pages/_document.js",
     );
   }
 
   // deno-lint-ignore no-explicit-any
   private async loadComponent(key: string): Promise<ComponentType<any>> {
-    console.log(this.modules);
-    console.log(key);
     const module = this.get(key);
     if (!module) {
       throw new Error(`Could not find ${key}`);
