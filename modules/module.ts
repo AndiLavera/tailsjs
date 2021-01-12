@@ -135,7 +135,7 @@ export default class Module {
     if (!this.isPage) return;
 
     if (!this.importedModule) {
-      throw new Error("Must import module before rendering");
+      await this.import();
     }
 
     const html = await generateHTML({
