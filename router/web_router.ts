@@ -3,7 +3,6 @@ import { ModuleHandler } from "../modules/module_handler.ts";
 import { Context, Router as OakRouter } from "../deps.ts";
 import { WebModule, WebModules, WebRoute, WebRoutes } from "../types.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
-import Module from "../modules/module.ts";
 import { path } from "../std.ts";
 import { generateHTML } from "../utils/generateHTML.tsx";
 
@@ -35,7 +34,6 @@ export class WebRouter {
       throw new Error("_app or _document could not be loaded");
     }
 
-    const moduleHandler = this.moduleHandler;
     const webModules = this.webModules;
 
     webRoutes.routes.forEach((route) => {

@@ -1,5 +1,4 @@
 import { Configuration } from "../core/configuration.ts";
-import { ModuleHandler } from "../modules/module_handler.ts";
 import { APIModules, APIRoute, APIRoutes } from "../types.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
