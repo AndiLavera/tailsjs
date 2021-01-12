@@ -3,7 +3,8 @@ import { ModuleHandler } from "../modules/module_handler.ts";
 import { Context, Router as OakRouter } from "../deps.ts";
 import { WebModule, WebModules, WebRoute, WebRoutes } from "../types.ts";
 import { setMiddleware, setStaticMiddleware } from "./utils.ts";
-import Module from "../modules/module.ts";
+import { path } from "../std.ts";
+import { generateHTML } from "../utils/generateHTML.tsx";
 
 export class WebRouter {
   readonly router: OakRouter;
@@ -33,7 +34,6 @@ export class WebRouter {
       throw new Error("_app or _document could not be loaded");
     }
 
-    const moduleHandler = this.moduleHandler;
     const webModules = this.webModules;
 
     webRoutes.routes.forEach((route) => {
@@ -43,21 +43,28 @@ export class WebRouter {
         try {
           let webModule = webModules[route.path];
           if (!webModule) {
-            webModule = await loadWebModule(route, moduleHandler, webModules);
+            webModule = await loadWebModule(
+              route,
+              webModules,
+              this.config.buildDir,
+            );
           }
 
           // deno-lint-ignore no-explicit-any
           let props: any;
 
-          if (webModule.controller.imp && method) {
-            props = new webModule.controller.imp()[method]();
+          if (webModule.controller && method) {
+            props = new webModule.controller()[method]();
           }
 
-          const html = await webModule.page.module.fetchHTML(
-            App,
-            Document,
+          const html = await generateHTML({
+            App: App,
+            Document: Document,
+            Component: webModule.page,
             props,
-          );
+            reactWritePath: this.config.reactWritePath as string,
+            reactServerWritePath: this.config.reactServerWritePath as string,
+          });
           context.response.type = "text/html";
           context.response.body = html;
         } catch (error) {
@@ -70,35 +77,30 @@ export class WebRouter {
 
 export async function loadWebModule(
   route: WebRoute,
-  moduleHandler: ModuleHandler,
   webModules: WebModules,
+  buildDir: string,
 ): Promise<WebModule> {
   const { controller: controllerName, method } = route;
 
   let controllerModule;
   if (controllerName && method) {
-    controllerModule = moduleHandler.modules.get(
+    controllerModule = path.join(
+      buildDir,
       `/server/controllers/${controllerName}.js`,
     );
   }
 
   let controller;
   try {
-    const pageModule = moduleHandler.modules.get(`/app/pages/${route.page}.js`);
-    const page = (await pageModule?.import()).default;
+    const pageModule = path.join(buildDir, `/app/pages/${route.page}.js`);
+    const page = (await import(pageModule)).default;
     if (controllerModule) {
-      controller = (await controllerModule?.import()).default;
+      controller = (await import(controllerModule)).default;
     }
 
     const webModule = {
-      page: {
-        imp: page,
-        module: pageModule as Module,
-      },
-      controller: {
-        imp: controller,
-        module: controllerModule,
-      },
+      page,
+      controller,
     };
 
     webModules[route.path] = webModule;

@@ -2,13 +2,12 @@ import { Configuration } from "../core/configuration.ts";
 import { ModuleHandler } from "../modules/module_handler.ts";
 import { Router as OakRouter } from "../deps.ts";
 import { Context } from "../deps.ts";
-import { path, walk } from "../std.ts";
+import { walk } from "../std.ts";
 import { cache } from "https://deno.land/x/cache@0.2.9/mod.ts";
 import log from "../logger/logger.ts";
 import { getContentType } from "../mime.ts";
 import { injectHMR } from "../hmr/injectHMR.ts";
 import util from "../core/utils.ts";
-import Module from "../modules/module.ts";
 import { version } from "../version.ts";
 
 export default class AssetRouter {
