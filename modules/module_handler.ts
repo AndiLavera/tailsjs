@@ -12,6 +12,7 @@ import { loadWebModule } from "../router/web_router.ts";
 import { path, walk } from "../std.ts";
 import { logBuildEvents } from "../logger/utils.ts";
 import { fetchReactAssets } from "../utils/fetchReactAssets.ts";
+import { generateHTML } from "../utils/generateHTML.tsx";
 
 export class ModuleHandler {
   // deno-lint-ignore no-explicit-any
@@ -199,30 +200,33 @@ export class ModuleHandler {
     this.manifest.modules[key] = manifestModule;
   }
 
-  // TODO: Rename renderStatic
   private async renderAll(routeHandler: RouteHandler) {
-    // TODO: loadApiModule?
-    // for await (const route of routeHandler.routes.web.routes) {
-    //   // TODO: continue if static
-    //   const webModule = await loadWebModule(
-    //     route,
-    //     this,
-    //     routeHandler.webModules,
-    //   );
+    for await (const route of routeHandler.routes.web.routes) {
+      // TODO: continue if static
+      const webModule = await loadWebModule(
+        route,
+        routeHandler.webModules,
+        this.config.buildDir,
+      );
 
-    //   let props;
-    //   if (webModule.controller.imp && route.method) {
-    //     props = new webModule.controller.imp()[route.method]();
-    //   }
+      let props;
+      if (webModule.controller && route.method) {
+        props = new webModule.controller()[route.method]();
+      }
 
-    //   await webModule.page.module.render(
-    //     // deno-lint-ignore no-explicit-any
-    //     this.appComponent as ComponentType<any>,
-    //     // deno-lint-ignore no-explicit-any
-    //     this.documentComponent as ComponentType<any>,
-    //     props,
-    //   );
-    // }
+      const module = this.modules.get(`/app/pages/${route.page}.js`);
+      if (!module) {
+        throw new Error("Module does not exist when rendering");
+      }
+
+      await module.render(
+        // deno-lint-ignore no-explicit-any
+        this.appComponent as ComponentType<any>,
+        // deno-lint-ignore no-explicit-any
+        this.documentComponent as ComponentType<any>,
+        props,
+      );
+    }
   }
 
   /**
