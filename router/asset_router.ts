@@ -80,6 +80,7 @@ export default class AssetRouter {
 
       const route = assetFilePath
         .replace(buildDir, "")
+        // .replace(this.config.assetDirName, "")
         .replace("/app", "")
         .replace("/pages", "")
         .replace("/public", "");
@@ -124,7 +125,7 @@ export default class AssetRouter {
                     type: "update",
                     moduleId: data.id,
                     updateUrl: data.id
-                      .replace("/app", "")
+                      .replace("/_tails", "")
                       .replace("/pages", ""),
                   }),
                 );

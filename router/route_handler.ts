@@ -15,8 +15,6 @@ export class RouteHandler {
   readonly apiModules: APIModules;
   readonly webModules: WebModules;
   readonly serverRouters: ServerRouter[];
-  readonly controllersDir: string;
-  readonly pagesDir: string;
 
   private readonly config: Configuration;
   private readonly assetRouter: AssetRouter;
@@ -31,9 +29,6 @@ export class RouteHandler {
     this.apiModules = {};
     this.webModules = {};
     this.serverRouters = [];
-
-    this.controllersDir = path.join(config.rootDir, ".tails/src/controllers");
-    this.pagesDir = path.join(config.rootDir, ".tails/src/pages");
 
     this.config = config;
     this.moduleHandler = moduleHandler;

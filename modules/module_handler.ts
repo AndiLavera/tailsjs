@@ -64,7 +64,7 @@ export class ModuleHandler {
   async build(routeHandler: RouteHandler) {
     await this.renderAll(routeHandler);
     await this.writeAll();
-    await logBuildEvents(path.join(this.appRoot, ".tails"));
+    await logBuildEvents(this.config.buildDir);
   }
 
   get(key: string): Module | undefined {
@@ -183,7 +183,7 @@ export class ModuleHandler {
 
   private async writeManifest() {
     await ensureTextFile(
-      `${this.appRoot}/.tails/manifest.json`,
+      `${this.config.buildDir}/manifest.json`,
       JSON.stringify(this.manifest),
     );
   }
@@ -241,14 +241,18 @@ export class ModuleHandler {
    * `writeAll` as loadXComponent expects the manifest to be built.
    */
   private async setDefaultComponents(): Promise<void> {
-    this.appComponent = await this.loadComponent("/app/pages/_app.js");
+    this.appComponent = await this.loadComponent(
+      path.join(this.config.assetDirName, "/pages/_app.js"),
+    );
     this.documentComponent = await this.loadComponent(
-      "/app/pages/_document.js",
+      path.join(this.config.assetDirName, "/pages/_document.js"),
     );
   }
 
   // deno-lint-ignore no-explicit-any
   private async loadComponent(key: string): Promise<ComponentType<any>> {
+    console.log(this.modules);
+    console.log(key);
     const module = this.get(key);
     if (!module) {
       throw new Error(`Could not find ${key}`);

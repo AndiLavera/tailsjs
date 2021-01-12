@@ -29,14 +29,6 @@ export class Application {
     );
   }
 
-  get buildDir() {
-    return path.join(
-      this.appRoot,
-      ".tails",
-      this.mode + "." + this.config.buildTarget,
-    );
-  }
-
   get routers() {
     return this.routeHandler.serverRouters;
   }

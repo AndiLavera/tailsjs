@@ -13,10 +13,6 @@ import * as renderer from "../modules/renderer.ts";
 
 const plugins = [rewriteImports, cssModule, wasm, css, fetchRemote];
 
-export function forEach(callback: (plugin: CompilerPlugin) => void) {
-  return plugins.forEach((plugin) => callback(plugin));
-}
-
 /**
  * Handles iterating through all modules passing the module & key
  * into plugin.preTransform. All modules are passed into `resolve`
@@ -172,7 +168,7 @@ export async function compileApplication(
   let skip: RegExp[] = [];
   const includeDirs = true;
 
-  forEach(({ walkOptions }) => {
+  plugins.forEach(({ walkOptions }) => {
     if (walkOptions) {
       if (walkOptions.exts) {
         exts = exts.concat(walkOptions.exts);

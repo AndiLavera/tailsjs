@@ -192,10 +192,12 @@ export default class Module {
 
     for (const key of Object.keys(result)) {
       const cleanedKey = utils.cleanKey(key, this.config.rootDir);
+      //   .replace("/app", "");
+      // this.writePath = cleanedKey.includes("server")
+      //   ? cleanedKey
+      //   : path.join(this.config.assetDirName, cleanedKey);
 
-      this.writePath = path.join(cleanedKey);
       const module = result[key];
-
       if (typeof module === "string") {
         this.source = module;
       }
@@ -222,12 +224,14 @@ export default class Module {
     if (this.writePath) {
       const pathname = path.join(this.config.buildDir, this.writePath);
       await ensureTextFile(pathname, this.source as string);
+
       if (this.html) {
         await ensureTextFile(
           path.join(this.config.buildDir, this.htmlPath),
           this.html,
         );
       }
+
       if (this.map && !this.isServerMod) {
         await ensureTextFile(
           pathname + ".map",

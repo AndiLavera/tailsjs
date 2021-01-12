@@ -160,10 +160,19 @@ export class Configuration {
   }
 
   get buildDir() {
+    // return path.join(
+    //   this.rootDir,
+    //   ".tails",
+    // );
     return path.join(
       this.rootDir,
       ".tails",
+      this.mode + "." + this.buildTarget,
     );
+  }
+
+  get assetDirName() {
+    return "/_tails";
   }
 
   /**
@@ -171,11 +180,7 @@ export class Configuration {
    * when fetch assets.
    */
   get assetDir(): string {
-    if (this.isDev || this.isBuilding) {
-      return path.join(this.rootDir, "src");
-    }
-
-    return path.join(this.rootDir, ".tails");
+    return path.join(this.buildDir, this.assetDirName);
   }
 
   /**

@@ -22,5 +22,8 @@ export const handler = async (
   event: APIGatewayProxyEventV2,
   context: LambdaContext,
 ) => {
-  return await lamdaHandler(event, context, server);
+  const r = await lamdaHandler(event, context, server);
+  console.log("RESPONSSE");
+  console.log(r);
+  return r;
 };
